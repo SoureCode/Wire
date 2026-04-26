@@ -96,6 +96,15 @@ class WireBindingExtractor
             return null;
         }
 
+        // Twig's auto-escape (`escape` filter with html strategy) is wrapped
+        // around every print by the Escaper visitor. Client-side text bindings
+        // already write through textContent (auto-escaped) and attribute
+        // writes through setAttribute, so replaying it is redundant — drop
+        // the entry from the chain.
+        if ($name === 'escape' || $name === 'e') {
+            return $inner;
+        }
+
         $args = self::extractFilterArgs($node->getNode('arguments'));
         if ($args === null) {
             return null;
@@ -109,18 +118,29 @@ class WireBindingExtractor
 
     /**
      * Extract a filter's positional argument list, or null if any argument
-     * is not a literal constant.
+     * is not a literal constant. Twig stores filter arguments as either an
+     * ArrayExpression (alternating key/value child pairs) or as a plain Node
+     * container of value expressions.
      */
     private static function extractFilterArgs(Node $arguments): ?array
     {
-        if (!$arguments instanceof ArrayExpression) {
-            return null;
+        $args = [];
+
+        if ($arguments instanceof ArrayExpression) {
+            foreach ($arguments as $key => $child) {
+                if ($key % 2 === 0) {
+                    continue;
+                }
+                if (!$child instanceof ConstantExpression) {
+                    return null;
+                }
+                $args[] = $child->getAttribute('value');
+            }
+            return $args;
         }
 
-        $args = [];
-        foreach ($arguments as $key => $child) {
-            // ArrayExpression children alternate key, value; we keep values.
-            if ($key % 2 === 0) {
+        foreach ($arguments as $child) {
+            if (!$child instanceof Node) {
                 continue;
             }
             if (!$child instanceof ConstantExpression) {

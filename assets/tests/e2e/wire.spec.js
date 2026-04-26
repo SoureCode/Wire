@@ -5,17 +5,17 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('text bindings render initial values', async ({ page }) => {
-    await expect(page.locator('h1[data-wire]')).toHaveText('Jason');
-    await expect(page.locator('p[data-wire]')).toHaveText('jason@example.com');
+    await expect(page.locator('main h1, body > h1, h1')).toHaveText('Jason');
+    await expect(page.locator('main p, body > p, p')).toHaveText('jason@example.com');
 });
 
 test('attribute binding sets class from data', async ({ page }) => {
-    await expect(page.locator('span[data-wire]')).toHaveAttribute('class', 'active');
+    await expect(page.locator('span').first()).toHaveAttribute('class', 'active');
 });
 
 test('typing in input updates the bound text element', async ({ page }) => {
-    const input = page.locator('input[data-wire]');
-    const heading = page.locator('h1[data-wire]');
+    const input = page.locator('input').first();
+    const heading = page.locator('h1').first();
 
     await input.fill('');
     await input.type('New Name');

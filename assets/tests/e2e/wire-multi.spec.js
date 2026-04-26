@@ -30,11 +30,11 @@ test.describe('initial render', () => {
     });
 
     test('first card status class is active', async ({ page }) => {
-        await expect(page.locator('.user-card').nth(0).locator('[data-wire="user.status:class"]')).toHaveAttribute('class', 'active');
+        await expect(page.locator('.user-card').nth(0).locator('.card-status')).toHaveAttribute('class', 'card-status active');
     });
 
     test('second card status class is inactive', async ({ page }) => {
-        await expect(page.locator('.user-card').nth(1).locator('[data-wire="user.status:class"]')).toHaveAttribute('class', 'inactive');
+        await expect(page.locator('.user-card').nth(1).locator('.card-status')).toHaveAttribute('class', 'card-status inactive');
     });
 });
 
@@ -120,8 +120,8 @@ test.describe('independent instance updates', () => {
         await page.evaluate(() => {
             window.Wire.getScope(document.querySelectorAll('.user-card')[0]).get('user').status = 'vip';
         });
-        await expect(page.locator('.user-card').nth(0).locator('[data-wire="user.status:class"]')).toHaveAttribute('class', 'vip');
-        await expect(page.locator('.user-card').nth(1).locator('[data-wire="user.status:class"]')).toHaveAttribute('class', 'inactive');
+        await expect(page.locator('.user-card').nth(0).locator('.card-status')).toHaveAttribute('class', 'card-status vip');
+        await expect(page.locator('.user-card').nth(1).locator('.card-status')).toHaveAttribute('class', 'card-status inactive');
     });
 });
 

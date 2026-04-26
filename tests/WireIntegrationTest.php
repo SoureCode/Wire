@@ -129,6 +129,37 @@ class WireIntegrationTest extends TestCase
         $this->assertStringContainsString('<!-- /wire-scope:simple.html.twig -->', $html);
     }
 
+    public function testTextContentMarkerEmittedForSimpleTemplate(): void
+    {
+        $user = (object)['name' => 'Jason', 'email' => 'jason@test.com'];
+        $html = $this->createEnv()->render('simple.html.twig', ['user' => $user]);
+
+        $this->assertStringContainsString('<!--w:{"p":"user.name"}-->Jason<!--/w-->', $html);
+    }
+
+    public function testAttributeMarkerEmittedOnFormControl(): void
+    {
+        $user = (object)['name' => 'Jason'];
+        $html = $this->createEnv()->render('with_attr.html.twig', ['user' => $user]);
+
+        $this->assertMatchesRegularExpression(
+            '/<input value="Jason"\s+wire:value=\'\{"p":"user\.name"\}\'\s*>/',
+            $html
+        );
+    }
+
+    public function testMarkersEmittedForExtendingTemplate(): void
+    {
+        $user = (object)['name' => 'Jason'];
+        $html = $this->createEnv()->render('extends_base.html.twig', ['user' => $user]);
+
+        $this->assertStringContainsString('<!--w:{"p":"user.name"}-->Jason<!--/w-->', $html);
+        $this->assertMatchesRegularExpression(
+            '/wire:value=\'\{"p":"user\.name"\}\'/',
+            $html
+        );
+    }
+
     public function testProdModeUsesShortHashAsScope(): void
     {
         $user     = (object)['name' => 'Jason'];

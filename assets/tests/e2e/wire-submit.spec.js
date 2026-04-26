@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const ANCHOR = 'h1[data-wire="user.name"]';
+const ANCHOR = 'h1';
 
 test.beforeEach(async ({ page }) => {
     await page.goto('/wire-test/fixture');

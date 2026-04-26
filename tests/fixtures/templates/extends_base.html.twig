@@ -1,0 +1,6 @@
+{% extends 'base_inline.html.twig' %}
+{% block body %}
+{% wire %}
+<h1>{{ user.name }}</h1>
+<input value="{{ user.name }}">
+{% endblock %}
