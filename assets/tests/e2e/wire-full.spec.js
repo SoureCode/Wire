@@ -137,11 +137,6 @@ test.describe('Wire API', () => {
         expect(isFunction).toBe(true);
     });
 
-    test('Wire.submit is a function', async ({ page }) => {
-        const isFunction = await page.evaluate(() => typeof window.Wire.submit === 'function');
-        expect(isFunction).toBe(true);
-    });
-
     test('Wire.getScope(insideScope) returns object with get + getSnapshot', async ({ page }) => {
         const shape = await page.evaluate((sel) => {
             const scope = window.Wire.getScope(document.querySelector(sel));
@@ -176,7 +171,8 @@ test.describe('Wire API', () => {
         const snap = await page.evaluate((sel) => window.Wire.getScope(document.querySelector(sel)).getSnapshot(), ANCHOR);
         expect(snap.user.__class).toBeUndefined();
         expect(snap.user.__id).toBeUndefined();
-        expect(snap.user.__submit).toBeUndefined();
+        expect(snap.user.__read).toBeUndefined();
+        expect(snap.user.__update).toBeUndefined();
     });
 
     test('snapshot is a deep clone — mutations do not affect live data', async ({ page }) => {

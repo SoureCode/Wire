@@ -103,7 +103,7 @@ export function mergeIntoEntity(payload) {
 
     const changed = [];
     for (const key of Object.keys(payload)) {
-        if (key === '__class' || key === '__id' || key === '__submit' || key === '__read' || key === '__update') {
+        if (key === '__class' || key === '__id' || key === '__read' || key === '__update') {
             continue;
         }
         entry.canonical[key] = payload[key];

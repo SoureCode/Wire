@@ -11,7 +11,7 @@ use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Routing\RouterInterface;
 
 /**
- * Builds the identity tag (`__class`, `__id`, optional `__submit` / `__read` / `__update`)
+ * Builds the identity tag (`__class`, `__id`, optional `__read` / `__update`)
  * for a value. Used both by the path-walking runtime and by WireIdentityNormalizer.
  */
 class WireIdentityResolver
@@ -25,7 +25,7 @@ class WireIdentityResolver
     }
 
     /**
-     * @return array{__class:string,__id:mixed,__submit?:array{url:string,method:string},__read?:array{url:string,method:string},__update?:array{url:string,method:string}}|null
+     * @return array{__class:string,__id:mixed,__read?:array{url:string,method:string},__update?:array{url:string,method:string}}|null
      */
     public function tag(object $value): ?array
     {
@@ -53,11 +53,6 @@ class WireIdentityResolver
             return $tag;
         }
 
-        $submit = $this->resolveLegacySubmit($class, $wire, $idValues);
-        if ($submit !== null) {
-            $tag['__submit'] = $submit;
-        }
-
         $read = $this->resolveRoute($class, $value, $wire->readRouteName, $wire->readRouteParams);
         if ($read !== null) {
             $tag['__read'] = $read;
@@ -80,33 +75,6 @@ class WireIdentityResolver
         }
 
         return $attrs[0]->newInstance();
-    }
-
-    /**
-     * @param array<string,mixed> $idValues
-     * @return array{url:string,method:string}|null
-     */
-    private function resolveLegacySubmit(string $class, Wire $wire, array $idValues): ?array
-    {
-        if ($wire->submit === null) {
-            return null;
-        }
-
-        $route = $this->router->getRouteCollection()->get($wire->submit);
-        if ($route === null) {
-            throw new \RuntimeException(sprintf(
-                'Wire route "%s" referenced by %s does not exist.',
-                $wire->submit,
-                $class
-            ));
-        }
-
-        $methods = $route->getMethods();
-
-        return [
-            'url'    => $this->router->generate($wire->submit, $idValues, UrlGeneratorInterface::ABSOLUTE_PATH),
-            'method' => $methods === [] ? 'POST' : $methods[0],
-        ];
     }
 
     /**

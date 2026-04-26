@@ -66,9 +66,9 @@ function unify(value, identityMap) {
 }
 
 /**
- * Return a deep-cloned copy of `value` with all `__class` / `__id` /
- * `__submit` keys stripped. Used when building the request payload for
- * `Wire.submit()`.
+ * Return a deep-cloned copy of `value` with all identity tags
+ * (`__class`, `__id`, `__read`, `__update`) stripped. Used when building
+ * snapshots for $update payloads, $isDirty comparisons, and history records.
  *
  * @param {unknown} value
  * @returns {unknown}
@@ -85,7 +85,7 @@ export function stripIdentityTags(value) {
     const out = {};
 
     for (const key of Object.keys(value)) {
-        if (key === '__class' || key === '__id' || key === '__submit' || key === '__read' || key === '__update') {
+        if (key === '__class' || key === '__id' || key === '__read' || key === '__update') {
             continue;
         }
 

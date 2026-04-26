@@ -134,7 +134,7 @@ function revert(target, scope, path) {
     }
 
     for (const key of Object.keys(target)) {
-        if (touched.has(key) || key === '__class' || key === '__id' || key === '__submit' || key === '__read' || key === '__update') {
+        if (touched.has(key) || key === '__class' || key === '__id' || key === '__read' || key === '__update') {
             continue;
         }
         delete target[key];
