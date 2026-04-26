@@ -1,0 +1,17 @@
+{
+  "name": "@sourecode/wire",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite build --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test"
+  },
+  "devDependencies": {
+    "vite": "^8.0.0",
+    "vitest": "^4.0.0",
+    "@playwright/test": "^1.59.0"
+  }
+}

@@ -1,0 +1,61 @@
+/** @import { Scope } from './types.js' */
+
+import { resolvePath } from './path.js';
+
+/**
+ * Apply a resolved value to a DOM element according to the binding target.
+ *
+ * @param {HTMLElement} element
+ * @param {string} target - "text" sets textContent, "value" sets .value, anything else sets an attribute
+ * @param {unknown} value
+ * @returns {void}
+ */
+export function applyBinding(element, target, value) {
+    if (target === 'text') {
+        element.textContent = value ?? '';
+    } else if (target === 'value') {
+        element.value = value ?? '';
+    } else {
+        element.setAttribute(target, value ?? '');
+    }
+}
+
+/**
+ * Re-apply all bindings in `scope` whose path starts with `changedPath`.
+ *
+ * @param {Scope} scope
+ * @param {string} changedPath
+ * @returns {void}
+ */
+export function updateScopeBindings(scope, changedPath) {
+    for (const binding of scope.bindings) {
+        if (binding.path === changedPath || binding.path.startsWith(changedPath + '.')) {
+            applyBinding(binding.element, binding.target, resolvePath(scope.data, binding.path));
+        }
+    }
+}
+
+/**
+ * Update bindings in the changed scope and propagate to aliased paths in other
+ * scopes via the scope's refMap.
+ *
+ * @param {Scope} scope
+ * @param {string} changedPath
+ * @returns {void}
+ */
+export function updateBindings(scope, changedPath) {
+    updateScopeBindings(scope, changedPath);
+
+    for (const [refPath, aliases] of Object.entries(scope.refMap)) {
+        if (changedPath === refPath || changedPath.startsWith(refPath + '.')) {
+            const suffix = changedPath.slice(refPath.length);
+
+            for (const alias of aliases) {
+                const aliasedPath = alias.path + suffix;
+                const targetScope = alias.scope || scope;
+
+                updateScopeBindings(targetScope, aliasedPath);
+            }
+        }
+    }
+}
