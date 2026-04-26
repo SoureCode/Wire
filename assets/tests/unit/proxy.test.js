@@ -1,7 +1,8 @@
 /** @import { ScopeBindings } from '../../src/types.js' */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { makeProxy } from '../../src/proxy.js';
+import { clearRegistry, registerEntity } from '../../src/entityRegistry.js';
 
 /**
  * @param {Record<string, unknown>} data
@@ -12,6 +13,8 @@ function makeScope(data) {
 }
 
 describe('makeProxy', () => {
+    beforeEach(() => clearRegistry());
+
     it('reads a top-level primitive through the proxy', () => {
         const data = { name: 'Jason' };
         const proxy = makeProxy(data, makeScope(data));
@@ -80,6 +83,60 @@ describe('makeProxy', () => {
         const snap = proxy.$getSnapshot();
         expect(snap).toEqual({ name: 'Alice', nested: { k: 'v' } });
         expect(snap).not.toBe(data);
+    });
+
+    it('$isDirty returns false for non-entity proxies', () => {
+        const data = { name: 'Alice' };
+        const proxy = makeProxy(data, makeScope(data));
+        expect(proxy.$isDirty()).toBe(false);
+    });
+
+    it('$isDirty returns false when state matches the registered baseline', () => {
+        const data = { __class: 'User', __id: 1, name: 'Alice' };
+        registerEntity(data);
+        const proxy = makeProxy(data, makeScope(data));
+        expect(proxy.$isDirty()).toBe(false);
+    });
+
+    it('$isDirty returns true after a field mutation', () => {
+        const data = { __class: 'User', __id: 1, name: 'Alice' };
+        registerEntity(data);
+        const proxy = makeProxy(data, makeScope(data));
+        proxy.name = 'Bob';
+        expect(proxy.$isDirty()).toBe(true);
+    });
+
+    it('$revert restores baseline values and triggers DOM updates', () => {
+        const node = document.createTextNode('');
+        const data = { __class: 'User', __id: 1, name: 'Alice' };
+        registerEntity(data);
+        const scope = {
+            data,
+            bindings: [{ kind: 'text', node, descriptor: { p: 'name' }, paths: ['name'] }],
+            refMap: {},
+        };
+        const proxy = makeProxy(data, scope);
+        proxy.name = 'Bob';
+        expect(node.nodeValue).toBe('Bob');
+
+        proxy.$revert();
+
+        expect(data.name).toBe('Alice');
+        expect(node.nodeValue).toBe('Alice');
+        expect(proxy.$isDirty()).toBe(false);
+    });
+
+    it('$revert removes fields added since the baseline', () => {
+        const data = { __class: 'User', __id: 1, name: 'Alice' };
+        registerEntity(data);
+        const proxy = makeProxy(data, makeScope(data));
+        proxy.email = 'a@x';
+        expect(proxy.$isDirty()).toBe(true);
+
+        proxy.$revert();
+
+        expect('email' in data).toBe(false);
+        expect(proxy.$isDirty()).toBe(false);
     });
 
     it('triggers DOM updates when a property is set', () => {

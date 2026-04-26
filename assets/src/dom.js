@@ -2,6 +2,7 @@
 
 import { resolveRefs, buildRefMap, buildCrossScopeRefs } from './refs.js';
 import { unifyByIdentity } from './identity.js';
+import { clearRegistry, registerEntity } from './entityRegistry.js';
 import { applyBinding } from './bindings.js';
 import { extractPaths } from './path.js';
 import { createScope, findScopeFor } from './scope.js';
@@ -54,7 +55,11 @@ export function parseScopes() {
         resolveRefs(draft.data, drafts);
     }
 
-    unifyByIdentity(drafts);
+    clearRegistry();
+    const identityMap = unifyByIdentity(drafts);
+    for (const canonical of identityMap.values()) {
+        registerEntity(canonical);
+    }
 
     for (const draft of drafts) {
         draft.refMap = buildRefMap(draft.data);

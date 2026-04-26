@@ -85,7 +85,7 @@ export function stripIdentityTags(value) {
     const out = {};
 
     for (const key of Object.keys(value)) {
-        if (key === '__class' || key === '__id' || key === '__submit') {
+        if (key === '__class' || key === '__id' || key === '__submit' || key === '__read' || key === '__update') {
             continue;
         }
 
