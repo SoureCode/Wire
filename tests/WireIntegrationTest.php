@@ -15,7 +15,7 @@ class WireIntegrationTest extends TestCase
     protected function setUp(): void
     {
         $loader = new FilesystemLoader(__DIR__ . '/fixtures/templates');
-        $this->twig = new Environment($loader);
+        $this->twig = new Environment($loader, ['debug' => true]);
         $this->twig->addExtension(new WireExtension());
         WireHelper::reset();
     }
@@ -96,5 +96,55 @@ class WireIntegrationTest extends TestCase
 
         // The {% wire cascade %} tag itself must not emit any characters
         $this->assertStringNotContainsString('wire cascade', $html);
+    }
+
+    public function testDebugModeUsesFullTemplatePathAsScope(): void
+    {
+        $loader = new FilesystemLoader(__DIR__ . '/fixtures/templates');
+        $twig   = new Environment($loader, ['debug' => true]);
+        $twig->addExtension(new WireExtension());
+        WireHelper::reset();
+
+        $user = (object)['name' => 'Jason', 'email' => 'jason@test.com'];
+        $html = $twig->render('simple.html.twig', ['user' => $user]);
+
+        $this->assertStringContainsString('<!-- wire-scope:simple.html.twig -->', $html);
+        $this->assertStringContainsString('<!-- /wire-scope:simple.html.twig -->', $html);
+    }
+
+    public function testProdModeUsesShortHashAsScope(): void
+    {
+        $loader = new FilesystemLoader(__DIR__ . '/fixtures/templates');
+        $twig   = new Environment($loader, ['debug' => false]);
+        $twig->addExtension(new WireExtension());
+        WireHelper::reset();
+
+        $user     = (object)['name' => 'Jason', 'email' => 'jason@test.com'];
+        $html     = $twig->render('simple.html.twig', ['user' => $user]);
+        $expected = substr(hash('sha256', 'simple.html.twig'), 0, 8);
+
+        $this->assertStringContainsString("<!-- wire-scope:{$expected} -->", $html);
+        $this->assertStringContainsString("<!-- /wire-scope:{$expected} -->", $html);
+        $this->assertStringNotContainsString('wire-scope:simple.html.twig', $html);
+    }
+
+    public function testProdModeScopeIdInJsonBootstrap(): void
+    {
+        $loader = new FilesystemLoader(__DIR__ . '/fixtures/templates');
+        $twig   = new Environment($loader, ['debug' => false]);
+        $twig->addExtension(new WireExtension());
+        WireHelper::reset();
+
+        $shared = (object)['name' => 'Shared'];
+        $html   = $twig->render('simple.html.twig', ['user' => $shared]);
+
+        // Render a second time in a fresh WireHelper state to check cross-scope $ref uses hash
+        WireHelper::reset();
+        $scopeId = substr(hash('sha256', 'simple.html.twig'), 0, 8);
+        WireHelper::extract(['user' => $shared], ['user.name', 'user.email'], $scopeId);
+        $result = WireHelper::extract(['owner' => $shared], ['owner.name'], 'other');
+
+        $this->assertArrayHasKey('$ref', $result['owner']);
+        $this->assertStringStartsWith($scopeId . '#', $result['owner']['$ref']);
     }
 }

@@ -15,12 +15,15 @@ class WireScopeEndNode extends Node
 
     public function compile(Compiler $compiler): void
     {
-        $template = addslashes($this->getAttribute('template'));
-        $var = $this->getAttribute('var');
+        $templateName = $this->getAttribute('template');
+        $var          = $this->getAttribute('var');
+
+        $scopeId = WireHelper::scopeId($templateName, $compiler->getEnvironment()->isDebug());
+        $marker  = addslashes($scopeId);
 
         $compiler
             ->write("if (!empty(\${$var})) {\n")
-            ->write("    echo '<!-- /wire-scope:" . $template . " -->';\n")
+            ->write("    echo '<!-- /wire-scope:" . $marker . " -->';\n")
             ->write("}\n");
     }
 }

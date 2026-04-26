@@ -6,6 +6,11 @@ class WireHelper
 {
     private static array $globalSeen = [];
 
+    public static function scopeId(string $templateName, bool $debug): string
+    {
+        return $debug ? $templateName : substr(hash('sha256', $templateName), 0, 8);
+    }
+
     public static function reset(): void
     {
         self::$globalSeen = [];
@@ -64,6 +69,10 @@ class WireHelper
                 $localSeen[$id] = $dotPath;
                 self::$globalSeen[$id] = $scope . '#' . $dotPath;
             }
+        }
+
+        if ($value === null) {
+            return;
         }
 
         if (!isset($result[$key]) || !is_array($result[$key]) || isset($result[$key]['$ref'])) {
