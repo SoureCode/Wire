@@ -1,4 +1,4 @@
-/** @import { Scope } from './types.js' */
+/** @import { ScopeBindings } from './types.js' */
 
 import { updateBindings } from './bindings.js';
 
@@ -7,7 +7,7 @@ import { updateBindings } from './bindings.js';
  * property assignment.
  *
  * @param {Record<string, unknown>} data
- * @param {Scope} scope
+ * @param {ScopeBindings} scope
  * @param {string} [path] - dot-path prefix for this proxy level
  * @returns {Record<string, unknown>}
  */

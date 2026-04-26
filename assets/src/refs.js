@@ -1,4 +1,4 @@
-/** @import { Scope, RefMap } from './types.js' */
+/** @import { ScopeSnapshot, ScopeRefs, RefMap } from './types.js' */
 
 import { resolvePath } from './path.js';
 import { isPlainObject } from './utils/isPlainObject.js';
@@ -9,7 +9,7 @@ import { isPlainObject } from './utils/isPlainObject.js';
  * scope (cross-scope ref identified by "scopeName#path").
  *
  * @param {Record<string, unknown>} data - object to resolve in-place
- * @param {Scope[]} scopes - all registered scopes (needed for cross-scope refs)
+ * @param {ScopeSnapshot[]} scopes - all registered scopes (needed for cross-scope refs)
  * @param {Record<string, unknown>} [root] - root of the current scope's data tree
  * @returns {Record<string, unknown>}
  */
@@ -100,11 +100,11 @@ export function buildRefMap(data) {
  * When the same JS object is referenced in multiple scopes, Wire must keep
  * those in sync — this builds the necessary alias entries.
  *
- * @param {Scope[]} scopes
+ * @param {ScopeRefs[]} scopes
  * @returns {void}
  */
 export function buildCrossScopeRefs(scopes) {
-    /** @type {WeakMap<object, Array<{scope: Scope, path: string}>>} */
+    /** @type {WeakMap<object, Array<{scope: ScopeRefs, path: string}>>} */
     const objectToEntries = new WeakMap();
 
     for (const scope of scopes) {

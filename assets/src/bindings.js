@@ -1,4 +1,4 @@
-/** @import { Scope } from './types.js' */
+/** @import { ScopeData, ScopeBindings } from './types.js' */
 
 import { resolvePath } from './path.js';
 
@@ -23,7 +23,7 @@ export function applyBinding(element, target, value) {
 /**
  * Re-apply all bindings in `scope` whose path starts with `changedPath`.
  *
- * @param {Scope} scope
+ * @param {ScopeData} scope
  * @param {string} changedPath
  * @returns {void}
  */
@@ -39,7 +39,7 @@ export function updateScopeBindings(scope, changedPath) {
  * Update bindings in the changed scope and propagate to aliased paths in other
  * scopes via the scope's refMap.
  *
- * @param {Scope} scope
+ * @param {ScopeBindings} scope
  * @param {string} changedPath
  * @returns {void}
  */

@@ -6,8 +6,16 @@
  */
 
 /**
+ * Minimal shape required by buildCrossScopeRefs.
+ *
+ * @typedef {Object} ScopeRefs
+ * @property {Record<string, unknown>} data
+ * @property {RefMap} refMap
+ */
+
+/**
  * @typedef {Object} Alias
- * @property {Scope|null} scope - null means same scope
+ * @property {ScopeRefs|null} scope - null means same scope
  * @property {string} path
  */
 
@@ -17,11 +25,33 @@
  */
 
 /**
- * @typedef {Object} Scope
- * @property {string} name - scope identifier (template path in debug, sha256 prefix in prod)
- * @property {Record<string, unknown>} data - deserialized wire bootstrap JSON, refs resolved
+ * Minimal shape required by snapshot.
+ *
+ * @typedef {Object} ScopeSnapshot
+ * @property {string} name
+ * @property {Record<string, unknown>} data
+ */
+
+/**
+ * Minimal shape required by updateScopeBindings.
+ *
+ * @typedef {Object} ScopeData
+ * @property {Record<string, unknown>} data
  * @property {Binding[]} bindings
+ */
+
+/**
+ * Minimal shape required by updateBindings (adds refMap for alias propagation).
+ *
+ * @typedef {ScopeData & Object} ScopeBindings
  * @property {RefMap} refMap
+ */
+
+/**
+ * Full scope object created by the DOM parser.
+ *
+ * @typedef {ScopeBindings & Object} Scope
+ * @property {string} name - scope identifier (template path in debug, sha256 prefix in prod)
  * @property {Comment} startComment
  * @property {Comment} endComment
  * @property {Record<string, unknown>} proxy - reactive Proxy wrapping data
