@@ -11,8 +11,7 @@ test.describe('dynamic element registration', () => {
         await page.evaluate(() => {
             const span = document.createElement('span');
             span.id = 'dynamic-text';
-            span.setAttribute('data-wire', 'user.name');
-            span.textContent = 'placeholder';
+            span.innerHTML = '<!--w:{"p":"user.name"}-->placeholder<!--/w-->';
             document.body.prepend(span);
         });
 
@@ -21,16 +20,17 @@ test.describe('dynamic element registration', () => {
         await expect(page.locator('#dynamic-text')).toHaveText('Dynamic');
     });
 
-    test('dynamically added element is not updated before any mutation', async ({ page }) => {
+    test('dynamically added element without markers is not registered', async ({ page }) => {
         await page.evaluate(() => {
             const span = document.createElement('span');
-            span.id = 'dynamic-text';
-            span.setAttribute('data-wire', 'user.name');
+            span.id = 'no-marker-text';
             span.textContent = 'placeholder';
             document.body.prepend(span);
         });
 
-        await expect(page.locator('#dynamic-text')).toHaveText('placeholder');
+        await page.evaluate((sel) => { window.Wire.getScope(document.querySelector(sel)).get('user').name = 'Changed'; }, ANCHOR);
+
+        await expect(page.locator('#no-marker-text')).toHaveText('placeholder');
     });
 
     test('multiple dynamically added elements all get updated', async ({ page }) => {
@@ -38,8 +38,7 @@ test.describe('dynamic element registration', () => {
             for (let i = 0; i < 3; i++) {
                 const span = document.createElement('span');
                 span.className = 'dynamic-name';
-                span.setAttribute('data-wire', 'user.name');
-                span.textContent = 'placeholder';
+                span.innerHTML = '<!--w:{"p":"user.name"}-->placeholder<!--/w-->';
                 document.body.prepend(span);
             }
         });
@@ -57,7 +56,7 @@ test.describe('dynamic element registration', () => {
         await page.evaluate(() => {
             const span = document.createElement('span');
             span.id = 'dynamic-text';
-            span.setAttribute('data-wire', 'user.name');
+            span.innerHTML = '<!--w:{"p":"user.name"}--><!--/w-->';
             document.body.prepend(span);
         });
 
@@ -67,24 +66,24 @@ test.describe('dynamic element registration', () => {
         await expect(page.locator('#dynamic-text')).toHaveText('Second');
     });
 
-    test('dynamically added element without data-wire is not registered', async ({ page }) => {
+    test('dynamically added element without any markers is not registered', async ({ page }) => {
         await page.evaluate(() => {
             const div = document.createElement('div');
-            div.id = 'no-wire-attr';
+            div.id = 'plain-div';
             div.textContent = 'untouched';
             document.body.prepend(div);
         });
 
         await page.evaluate((sel) => { window.Wire.getScope(document.querySelector(sel)).get('user').name = 'Changed'; }, ANCHOR);
 
-        await expect(page.locator('#no-wire-attr')).toHaveText('untouched');
+        await expect(page.locator('#plain-div')).toHaveText('untouched');
     });
 
     test('dynamically added attribute-bound element gets updated on mutation', async ({ page }) => {
         await page.evaluate(() => {
             const div = document.createElement('div');
             div.id = 'dynamic-attr';
-            div.setAttribute('data-wire', 'user.status:class');
+            div.setAttribute('wire:class', '{"p":"user.status"}');
             document.body.prepend(div);
         });
 
@@ -97,8 +96,8 @@ test.describe('dynamic element registration', () => {
         await page.evaluate(() => {
             const container = document.createElement('div');
             container.innerHTML = `
-                <span class="bulk-name" data-wire="user.name">a</span>
-                <span class="bulk-name" data-wire="user.name">b</span>
+                <span class="bulk-name"><!--w:{"p":"user.name"}-->a<!--/w--></span>
+                <span class="bulk-name"><!--w:{"p":"user.name"}-->b<!--/w--></span>
             `;
             document.body.prepend(container);
         });
