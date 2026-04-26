@@ -1,0 +1,17 @@
+{% extends 'layout.html.twig' %}
+
+{% block title %}Cart{% endblock %}
+
+{% block content %}
+<h1>Cart</h1>
+<p data-wire="cart.total">{{ cart.total }}</p>
+<p data-wire="cart.itemCount">{{ cart.itemCount }}</p>
+
+{% for item in cart.items %}
+    {% include 'cart_item.html.twig' with { 'item': item } %}
+{% endfor %}
+
+{% embed 'summary.html.twig' with { 'summary': { 'total': cart.total } } %}
+    {% block summary_title %}Order Summary{% endblock %}
+{% endembed %}
+{% endblock %}

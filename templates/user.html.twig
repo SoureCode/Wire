@@ -1,0 +1,11 @@
+{% extends 'layout.html.twig' %}
+
+{% block title %}User Profile{% endblock %}
+
+{% block content %}
+<h1 data-wire="user.name">{{ user.name }}</h1>
+<p data-wire="user.email">{{ user.email }}</p>
+<input data-wire="user.name:value" value="{{ user.name }}">
+
+{% include 'address.html.twig' with { 'address': user.address } %}
+{% endblock %}

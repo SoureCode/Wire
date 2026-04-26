@@ -1,0 +1,14 @@
+{
+    "name": "wire/wire",
+    "description": "Reactive data binding for server-rendered HTML",
+    "type": "library",
+    "require": {
+        "twig/twig": "^3.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Wire\\": "src/"
+        }
+    },
+    "minimum-stability": "stable"
+}
