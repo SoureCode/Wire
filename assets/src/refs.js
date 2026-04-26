@@ -1,6 +1,7 @@
 /** @import { Scope, RefMap } from './types.js' */
 
 import { resolvePath } from './path.js';
+import { isPlainObject } from './utils/isPlainObject.js';
 
 /**
  * Walk `data` in-place, replacing every `{ $ref }` placeholder with the
@@ -16,12 +17,12 @@ export function resolveRefs(data, scopes, root = data) {
     for (const key of Object.keys(data)) {
         const value = data[key];
 
-        if (!value || typeof value !== 'object') {
+        if (!isPlainObject(value)) {
             continue;
         }
 
-        if ('$ref' in value) {
-            const ref = /** @type {string} */ (value['$ref']);
+        if ('$ref' in value && typeof value['$ref'] === 'string') {
+            const ref = value['$ref'];
 
             if (ref.includes('#')) {
                 const [scopeName, path] = ref.split('#');
@@ -34,7 +35,7 @@ export function resolveRefs(data, scopes, root = data) {
                 data[key] = resolvePath(root, ref);
             }
         } else {
-            resolveRefs(/** @type {Record<string, unknown>} */ (value), scopes, root);
+            resolveRefs(value, scopes, root);
         }
     }
 
@@ -61,7 +62,7 @@ export function buildRefMap(data) {
      * @param {string} path
      */
     function walk(obj, path) {
-        if (!obj || typeof obj !== 'object') {
+        if (!isPlainObject(obj)) {
             return;
         }
 
@@ -112,7 +113,7 @@ export function buildCrossScopeRefs(scopes) {
          * @param {string} path
          */
         function register(obj, path) {
-            if (!obj || typeof obj !== 'object') {
+            if (!isPlainObject(obj)) {
                 return;
             }
 
@@ -136,7 +137,7 @@ export function buildCrossScopeRefs(scopes) {
          * @param {string} path
          */
         function addAliases(obj, path) {
-            if (!obj || typeof obj !== 'object') {
+            if (!isPlainObject(obj)) {
                 return;
             }
 

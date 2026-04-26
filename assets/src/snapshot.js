@@ -1,35 +1,6 @@
 /** @import { Scope } from './types.js' */
 
-/**
- * Recursively deep-clone a value, returning `null` for circular references.
- *
- * @param {unknown} obj
- * @param {WeakSet<object>} [seen]
- * @returns {unknown}
- */
-function deepClone(obj, seen = new WeakSet()) {
-    if (!obj || typeof obj !== 'object') {
-        return obj;
-    }
-
-    if (seen.has(obj)) {
-        return null;
-    }
-
-    seen.add(obj);
-
-    if (Array.isArray(obj)) {
-        return obj.map(item => deepClone(item, seen));
-    }
-
-    const result = {};
-
-    for (const key of Object.keys(obj)) {
-        result[key] = deepClone(obj[key], seen);
-    }
-
-    return result;
-}
+import { deepClone } from './utils/deepClone.js';
 
 /**
  * Return a deep-cloned snapshot of one or all scope data trees.
@@ -42,7 +13,7 @@ function deepClone(obj, seen = new WeakSet()) {
  */
 export function snapshot(scopes, name) {
     if (name === undefined) {
-        return scopes.map(scope => ({scope: scope.name, data: deepClone(scope.data)}));
+        return scopes.map(scope => ({ scope: scope.name, data: deepClone(scope.data) }));
     }
 
     const found = scopes.find(scope => scope.name === name);

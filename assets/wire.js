@@ -1,7 +1,9 @@
 import { parseScopes, setupMutationObserver } from './src/dom.js';
-import { snapshot } from './src/snapshot.js';
+import { snapshot as snapshotScopes } from './src/snapshot.js';
 
-/** @type {import('./src/types.js').Scope[]} */
+/** @import { Scope } from './src/types.js' */
+
+/** @type {Scope[]} */
 const scopes = [];
 
 /**
@@ -10,7 +12,7 @@ const scopes = [];
  *
  * @returns {void}
  */
-function init() {
+export function init() {
     parseScopes(scopes);
     setupMutationObserver(scopes);
 }
@@ -22,7 +24,7 @@ function init() {
  * @param {number} [index]
  * @returns {Record<string, unknown>|undefined}
  */
-function get(name, index = 0) {
+export function get(name, index = 0) {
     return scopes.filter(scope => scope.name === name)[index]?.proxy;
 }
 
@@ -32,17 +34,18 @@ function get(name, index = 0) {
  * @param {string} name
  * @returns {Array<Record<string, unknown>>}
  */
-function getAll(name) {
+export function getAll(name) {
     return scopes.filter(scope => scope.name === name).map(scope => scope.proxy);
 }
 
-document.addEventListener('DOMContentLoaded', () => init());
+/**
+ * Return a deep-cloned snapshot of one or all scope data trees.
+ *
+ * @param {string} [name]
+ * @returns {Array<{scope: string, data: unknown}>|unknown|null}
+ */
+export function snapshot(name) {
+    return snapshotScopes(scopes, name);
+}
 
-export const Wire = {
-    init,
-    scopes,
-    get,
-    getAll,
-    /** @param {string} [name] */
-    snapshot: (name) => snapshot(scopes, name),
-};
+document.addEventListener('DOMContentLoaded', () => init());

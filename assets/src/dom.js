@@ -21,15 +21,12 @@ function attachTwoWayListener(element, path, scope) {
         return;
     }
 
-    /** @type {FormControl} */
-    const formControl = element;
-
-    formControl.addEventListener('input', () => {
+    element.addEventListener('input', () => {
         const parts = path.split('.');
         const last = parts.pop();
         const parent = parts.reduce((current, key) => current[key], scope.proxy);
 
-        parent[last] = formControl.value;
+        parent[last] = element.value;
     });
 }
 
@@ -52,7 +49,7 @@ export function parseScopes(scopes) {
     let node;
 
     while ((node = walker.nextNode())) {
-        if (node.nodeType === Node.COMMENT_NODE) {
+        if (node instanceof Comment) {
             const text = node.textContent.trim();
 
             if (text.startsWith('wire-scope:')) {
@@ -73,10 +70,10 @@ export function parseScopes(scopes) {
                     scopes.push(scope);
                 }
             }
-        } else if (node.nodeType === Node.ELEMENT_NODE && stack.length) {
+        } else if (node instanceof HTMLElement && stack.length) {
             const scope = stack[stack.length - 1];
 
-            if (node.tagName === 'SCRIPT' && node.type === 'wire') {
+            if (node instanceof HTMLScriptElement && node.type === 'wire') {
                 scope.data = JSON.parse(node.textContent);
             }
 
