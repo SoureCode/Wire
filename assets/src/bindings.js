@@ -1,12 +1,35 @@
 /** @import { ScopeBindings } from './types.js' */
 
 import { resolvePath } from './path.js';
+import { applyFilters } from './filters.js';
 
 const BOOLEAN_ATTRS = new Set([
     'hidden', 'disabled', 'readonly', 'required', 'checked',
     'selected', 'multiple', 'autofocus', 'autoplay', 'controls',
     'loop', 'muted', 'open', 'reversed',
 ]);
+
+/**
+ * Evaluate a marker binding descriptor against the live scope data.
+ * Descriptor shapes:
+ *
+ *   { p: 'user.name' }
+ *   { p: 'user.name', f: [['upper'], ['trim']] }
+ *   { parts: [{ l: 'prefix-' }, { p: 'user.id' }, { l: '-suffix' }] }
+ *
+ * @param {object} descriptor
+ * @param {unknown} data
+ * @returns {unknown}
+ */
+export function evaluateBinding(descriptor, data) {
+    if (descriptor.parts) {
+        return descriptor.parts.map(part => {
+            if ('l' in part) return part.l;
+            return applyFilters(resolvePath(data, part.p), part.f) ?? '';
+        }).join('');
+    }
+    return applyFilters(resolvePath(data, descriptor.p), descriptor.f);
+}
 
 /**
  * Apply a resolved value to a DOM element according to the binding target.

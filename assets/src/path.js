@@ -22,3 +22,22 @@ export function resolvePath(obj, path) {
         return current[key];
     }, obj);
 }
+
+/**
+ * Return every dot-path a marker descriptor reads from. Used by the binding
+ * update propagator to know which bindings react to a given path mutation.
+ *
+ * Descriptor shapes:
+ *   { p: 'user.name' }                            → ['user.name']
+ *   { p: 'user.name', f: [...] }                  → ['user.name']
+ *   { parts: [{ l: '...' }, { p: 'user.name' }] } → ['user.name']
+ *
+ * @param {object} descriptor
+ * @returns {string[]}
+ */
+export function extractPaths(descriptor) {
+    if (descriptor.parts) {
+        return descriptor.parts.flatMap(part => 'p' in part ? [part.p] : []);
+    }
+    return descriptor.p ? [descriptor.p] : [];
+}
