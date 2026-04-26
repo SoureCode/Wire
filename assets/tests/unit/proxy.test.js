@@ -261,6 +261,61 @@ describe('makeProxy', () => {
         expect(data.name).toBe('Bob');
     });
 
+    it('$read merges fresh server state and clears dirty flag', async () => {
+        const data = {
+            __class: 'User',
+            __id: 1,
+            __read: { url: '/api/users/1', method: 'GET' },
+            name: 'Alice',
+        };
+        registerEntity(data);
+        const proxy = makeProxy(data, makeScope(data));
+
+        globalThis.fetch = () => Promise.resolve({
+            ok: true,
+            status: 200,
+            text: () => Promise.resolve(JSON.stringify({
+                __class: 'User',
+                __id: 1,
+                name: 'Server',
+                email: 's@x',
+            })),
+        });
+
+        await proxy.$read();
+
+        expect(data.name).toBe('Server');
+        expect(data.email).toBe('s@x');
+        expect(proxy.$isDirty()).toBe(false);
+    });
+
+    it('$read throws on unsaved local edits unless { force: true }', async () => {
+        const data = {
+            __class: 'User',
+            __id: 1,
+            __read: { url: '/api/users/1', method: 'GET' },
+            name: 'Alice',
+        };
+        registerEntity(data);
+        const proxy = makeProxy(data, makeScope(data));
+
+        proxy.name = 'Bob';
+
+        await expect(proxy.$read()).rejects.toThrow(/unsaved local edits/);
+
+        globalThis.fetch = () => Promise.resolve({
+            ok: true,
+            status: 200,
+            text: () => Promise.resolve(JSON.stringify({
+                __class: 'User',
+                __id: 1,
+                name: 'Server',
+            })),
+        });
+        await proxy.$read({ force: true });
+        expect(data.name).toBe('Server');
+    });
+
     it('triggers DOM updates when a property is set', () => {
         const node = document.createTextNode('');
         const data = { name: 'Jason' };

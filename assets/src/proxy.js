@@ -63,6 +63,10 @@ export function makeProxy(data, scope, path = '', entityOwner = null, entityPath
                 return (options) => update(target, options);
             }
 
+            if (key === '$read') {
+                return (options) => read(target, options);
+            }
+
             const value = target[key];
 
             if (value !== null && typeof value === 'object') {
@@ -182,6 +186,48 @@ async function update(target, options = {}) {
 
     if (!response.ok) {
         const error = new Error(`$update: server responded ${response.status}`);
+        error.status   = response.status;
+        error.response = response;
+        throw error;
+    }
+
+    const text = await response.text();
+    if (text.length === 0) {
+        return null;
+    }
+
+    const payload = JSON.parse(text);
+    mergeResponse(payload);
+    return payload;
+}
+
+/**
+ * @param {Record<string, unknown>} target
+ * @param {{ method?: string, url?: string, headers?: Record<string,string>, force?: boolean } | undefined} options
+ * @returns {Promise<unknown>}
+ */
+async function read(target, options = {}) {
+    if (!('__id' in target) || target['__id'] === undefined || target['__id'] === null) {
+        throw new Error('$read: entity has no __id; identity-less proxies cannot round-trip.');
+    }
+
+    const config = target['__read'];
+    if (!config || typeof config.url !== 'string' || typeof config.method !== 'string') {
+        throw new Error('$read: entity has no __read endpoint; declare #[Wire(readRouteName: ...)] on the class.');
+    }
+
+    if (!options.force && isDirty(target)) {
+        throw new Error('$read: entity has unsaved local edits; pass { force: true } to overwrite.');
+    }
+
+    const url     = options.url     ?? config.url;
+    const method  = options.method  ?? config.method;
+    const headers = { ...(options.headers ?? {}) };
+
+    const response = await fetch(url, { method, headers });
+
+    if (!response.ok) {
+        const error = new Error(`$read: server responded ${response.status}`);
         error.status   = response.status;
         error.response = response;
         throw error;
