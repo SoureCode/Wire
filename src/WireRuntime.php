@@ -94,17 +94,29 @@ class WireRuntime implements RuntimeExtensionInterface
             return $this->serializeObject($value);
         }
 
+        if (is_array($value)) {
+            $out = [];
+            foreach ($value as $key => $item) {
+                $out[$key] = $this->serializeValue($item, $scopeId, $path . '.' . $key, $localSeen);
+            }
+            return $out;
+        }
+
         return $value;
     }
 
     private function serializeObject(object $value): array
     {
-        $payload = $this->serializer->normalize($value, null, [
-            'groups' => [$this->serializerGroup],
-        ]);
+        if ($value instanceof \stdClass) {
+            $payload = get_object_vars($value);
+        } else {
+            $payload = $this->serializer->normalize($value, null, [
+                'groups' => [$this->serializerGroup],
+            ]);
 
-        if (!is_array($payload)) {
-            $payload = [];
+            if (!is_array($payload)) {
+                $payload = [];
+            }
         }
 
         $identity = $this->identity($value);
