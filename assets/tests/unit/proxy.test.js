@@ -46,18 +46,23 @@ describe('makeProxy', () => {
     });
 
     it('triggers DOM updates when a property is set', () => {
-        const element = document.createElement('span');
+        const node = document.createTextNode('');
         const data = { name: 'Jason' };
         /** @type {ScopeBindings} */
         const scope = {
             data,
-            bindings: [{ element, path: 'name', target: 'text' }],
+            bindings: [{
+                kind: 'text',
+                node,
+                descriptor: { p: 'name' },
+                paths: ['name'],
+            }],
             refMap: {},
         };
         const proxy = makeProxy(data, scope);
 
         proxy.name = 'Updated';
 
-        expect(element.textContent).toBe('Updated');
+        expect(node.nodeValue).toBe('Updated');
     });
 });

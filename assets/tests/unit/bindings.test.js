@@ -1,101 +1,125 @@
 /** @import { ScopeBindings } from '../../src/types.js' */
 
 import { describe, it, expect } from 'vitest';
-import { applyBinding, updateScopeBindings, updateBindings } from '../../src/bindings.js';
+import { applyBinding, evaluateBinding, updateScopeBindings, updateBindings } from '../../src/bindings.js';
 
-function makeElement(tag = 'span') {
-    return document.createElement(tag);
+function textBinding(node, descriptor) {
+    return { kind: 'text', node, descriptor, paths: descriptor.p ? [descriptor.p] : descriptor.parts.flatMap(p => 'p' in p ? [p.p] : []) };
 }
 
+function attrBinding(element, attr, descriptor) {
+    return { kind: 'attr', node: element, attr, descriptor, paths: descriptor.p ? [descriptor.p] : descriptor.parts.flatMap(p => 'p' in p ? [p.p] : []) };
+}
+
+describe('evaluateBinding', () => {
+    it('resolves a pure path', () => {
+        expect(evaluateBinding({ p: 'user.name' }, { user: { name: 'Jason' } })).toBe('Jason');
+    });
+
+    it('applies a filter chain', () => {
+        expect(evaluateBinding({ p: 'name', f: [['upper']] }, { name: 'jas' })).toBe('JAS');
+    });
+
+    it('rebuilds concat parts', () => {
+        expect(evaluateBinding(
+            { parts: [{ l: 'pre-' }, { p: 'a' }, { l: '-suf' }] },
+            { a: 'X' },
+        )).toBe('pre-X-suf');
+    });
+});
+
 describe('applyBinding', () => {
-    it('sets textContent for target "text"', () => {
-        const element = makeElement();
-
-        applyBinding(element, 'text', 'Hello');
-
-        expect(element.textContent).toBe('Hello');
+    it('writes nodeValue for text bindings', () => {
+        const node = document.createTextNode('');
+        applyBinding(textBinding(node, { p: 'name' }), { name: 'Hello' });
+        expect(node.nodeValue).toBe('Hello');
     });
 
-    it('sets value for target "value"', () => {
-        const element = makeElement('input');
-
-        applyBinding(element, 'value', 'typed');
-
-        expect(element.value).toBe('typed');
+    it('writes value on form controls for attr=value', () => {
+        const input = document.createElement('input');
+        applyBinding(attrBinding(input, 'value', { p: 'name' }), { name: 'typed' });
+        expect(input.value).toBe('typed');
     });
 
-    it('sets an attribute for any other target', () => {
-        const element = makeElement();
+    it('sets a regular attribute via setAttribute', () => {
+        const el = document.createElement('span');
+        applyBinding(attrBinding(el, 'class', { p: 'status' }), { status: 'active' });
+        expect(el.getAttribute('class')).toBe('active');
+    });
 
-        applyBinding(element, 'class', 'active');
-
-        expect(element.getAttribute('class')).toBe('active');
+    it('applies a filter chain in attr context', () => {
+        const el = document.createElement('span');
+        applyBinding(attrBinding(el, 'data-name', { p: 'name', f: [['upper']] }), { name: 'jas' });
+        expect(el.getAttribute('data-name')).toBe('JAS');
     });
 
     it('uses empty string when value is null', () => {
-        const element = makeElement();
-
-        applyBinding(element, 'text', null);
-
-        expect(element.textContent).toBe('');
+        const node = document.createTextNode('original');
+        applyBinding(textBinding(node, { p: 'missing' }), {});
+        expect(node.nodeValue).toBe('');
     });
 });
 
 describe('updateScopeBindings', () => {
     it('updates bindings whose path matches changedPath', () => {
-        const element = makeElement();
+        const node = document.createTextNode('');
+        /** @type {ScopeBindings} */
         const scope = {
             data: { user: { name: 'Jason' } },
-            bindings: [{ element, path: 'user.name', target: 'text' }],
+            bindings: [textBinding(node, { p: 'user.name' })],
+            refMap: {},
         };
 
         updateScopeBindings(scope, 'user.name');
 
-        expect(element.textContent).toBe('Jason');
+        expect(node.nodeValue).toBe('Jason');
     });
 
-    it('updates bindings whose path starts with changedPath', () => {
-        const element = makeElement();
+    it('updates bindings when a parent path changes', () => {
+        const node = document.createTextNode('');
+        /** @type {ScopeBindings} */
         const scope = {
             data: { user: { name: 'Jason' } },
-            bindings: [{ element, path: 'user.name', target: 'text' }],
+            bindings: [textBinding(node, { p: 'user.name' })],
+            refMap: {},
         };
 
         updateScopeBindings(scope, 'user');
 
-        expect(element.textContent).toBe('Jason');
+        expect(node.nodeValue).toBe('Jason');
     });
 
     it('does not update bindings for unrelated paths', () => {
-        const element = makeElement();
-        element.textContent = 'original';
+        const node = document.createTextNode('original');
+        /** @type {ScopeBindings} */
         const scope = {
             data: { user: { name: 'Jason' } },
-            bindings: [{ element, path: 'user.name', target: 'text' }],
+            bindings: [textBinding(node, { p: 'user.name' })],
+            refMap: {},
         };
 
         updateScopeBindings(scope, 'other');
 
-        expect(element.textContent).toBe('original');
+        expect(node.nodeValue).toBe('original');
     });
 });
 
 describe('updateBindings', () => {
     it('propagates update to aliased scope via refMap', () => {
-        const element1 = makeElement();
-        const element2 = makeElement();
+        const node1 = document.createTextNode('');
+        const node2 = document.createTextNode('');
 
         /** @type {ScopeBindings} */
         const scope1 = {
             data: { address: { city: 'Berlin' } },
-            bindings: [{ element: element1, path: 'address.city', target: 'text' }],
+            bindings: [textBinding(node1, { p: 'address.city' })],
             refMap: {},
         };
 
         /** @type {ScopeBindings} */
         const scope2 = {
             data: { location: { city: 'Berlin' } },
-            bindings: [{ element: element2, path: 'location.city', target: 'text' }],
+            bindings: [textBinding(node2, { p: 'location.city' })],
             refMap: {},
         };
 
@@ -104,7 +128,9 @@ describe('updateBindings', () => {
         scope1.data.address.city = 'Munich';
         updateBindings(scope1, 'address.city');
 
-        expect(element1.textContent).toBe('Munich');
-        expect(element2.textContent).toBe('Berlin');
+        expect(node1.nodeValue).toBe('Munich');
+        // scope2 has its own independent data here; refMap propagation
+        // re-applies the binding but reads scope2.data which is unchanged.
+        expect(node2.nodeValue).toBe('Berlin');
     });
 });
