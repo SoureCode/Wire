@@ -8,9 +8,4 @@ class WireHelper
     {
         return $debug ? $templateName : substr(hash('sha256', $templateName), 0, 8);
     }
-
-    public static function reset(): void
-    {
-        WireNodeVisitor::resetCascade();
-    }
 }

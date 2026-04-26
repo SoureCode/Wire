@@ -7,7 +7,6 @@ use App\Entity\Post;
 use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Tools\SchemaTool;
-use SoureCode\Wire\WireHelper;
 use SoureCode\Wire\WireRuntime;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\HttpFoundation\Request;
@@ -35,7 +34,6 @@ abstract class WireIntegrationTestCase extends KernelTestCase
             $this->em->getClassMetadata(Post::class),
         ]);
 
-        WireHelper::reset();
         $this->runtime->reset();
     }
 

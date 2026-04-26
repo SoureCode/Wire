@@ -3,9 +3,10 @@
 namespace SoureCode\Wire;
 
 use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
+use Symfony\Contracts\Service\ResetInterface;
 use Twig\Extension\RuntimeExtensionInterface;
 
-class WireRuntime implements RuntimeExtensionInterface
+class WireRuntime implements RuntimeExtensionInterface, ResetInterface
 {
     /** @var array<int, string> spl_object_id → "scope#path" */
     private array $globalSeen = [];
@@ -19,6 +20,7 @@ class WireRuntime implements RuntimeExtensionInterface
     public function reset(): void
     {
         $this->globalSeen = [];
+        WireNodeVisitor::resetCascade();
     }
 
     /**

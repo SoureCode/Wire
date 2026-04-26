@@ -35,6 +35,7 @@ class WireExtension extends Extension
                 'wire',
             ])
             ->addTag('twig.runtime')
+            ->addTag('kernel.reset', ['method' => 'reset'])
             ->setPublic(false);
     }
 }

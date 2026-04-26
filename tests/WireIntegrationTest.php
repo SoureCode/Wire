@@ -4,7 +4,7 @@ namespace SoureCode\Wire\Tests;
 
 use PHPUnit\Framework\TestCase;
 use SoureCode\Wire\WireExtension;
-use SoureCode\Wire\WireHelper;
+use SoureCode\Wire\WireNodeVisitor;
 use SoureCode\Wire\WireRuntime;
 use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
 use Symfony\Component\Serializer\Serializer;
@@ -16,7 +16,7 @@ class WireIntegrationTest extends TestCase
 {
     protected function setUp(): void
     {
-        WireHelper::reset();
+        WireNodeVisitor::resetCascade();
     }
 
     private function createEnv(bool $debug = true): Environment

@@ -5,7 +5,6 @@ namespace App\Controller;
 use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Tools\SchemaTool;
-use SoureCode\Wire\WireHelper;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -20,8 +19,6 @@ class WireTestController extends AbstractController
         if (!$user) {
             throw $this->createNotFoundException();
         }
-
-        WireHelper::reset();
 
         return $this->render('wire_test/user.html.twig', ['user' => $user]);
     }
@@ -43,8 +40,6 @@ class WireTestController extends AbstractController
         if (!$user) {
             throw $this->createNotFoundException();
         }
-
-        WireHelper::reset();
 
         return $this->render('wire_test/full.html.twig', ['user' => $user]);
     }
@@ -72,8 +67,6 @@ class WireTestController extends AbstractController
             throw $this->createNotFoundException();
         }
 
-        WireHelper::reset();
-
         return $this->render('wire_test/cross_scope.html.twig', ['user' => $user]);
     }
 
@@ -96,8 +89,6 @@ class WireTestController extends AbstractController
     public function multi(EntityManagerInterface $em): Response
     {
         $users = $em->getRepository(User::class)->findAll();
-
-        WireHelper::reset();
 
         return $this->render('wire_test/multi.html.twig', ['users' => $users]);
     }
@@ -130,8 +121,6 @@ class WireTestController extends AbstractController
         if (!$user) {
             throw $this->createNotFoundException();
         }
-
-        WireHelper::reset();
 
         return $this->render('wire_test/cascade_parent.html.twig', ['user' => $user]);
     }
