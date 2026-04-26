@@ -10,7 +10,10 @@ use Symfony\Component\Serializer\Attribute\Groups;
 
 #[ORM\Entity]
 #[ORM\Table(name: '`user`')]
-#[Wire(submit: 'wire_test_user_save')]
+#[Wire(
+    readRouteName:   'wire_test_api_user_read',
+    updateRouteName: 'wire_test_api_user_update',
+)]
 class User
 {
     #[ORM\Id]

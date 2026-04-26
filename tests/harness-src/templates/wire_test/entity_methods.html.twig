@@ -1,0 +1,10 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Wire Test — Entity Methods{% endblock %}
+
+{% block body %}
+{% wire %}
+<h1 id="user-name">{{ user.name }}</h1>
+<p id="user-email">{{ user.email }}</p>
+<span id="user-status">{{ user.status }}</span>
+{% endblock %}

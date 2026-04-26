@@ -23,14 +23,76 @@ class WireTestController extends AbstractController
         return $this->render('wire_test/user.html.twig', ['user' => $user]);
     }
 
-    #[Route('/user/{id}/save', name: 'wire_test_user_save', methods: ['PUT'])]
-    public function userSave(int $id, \Symfony\Component\HttpFoundation\Request $request): \Symfony\Component\HttpFoundation\JsonResponse
+    #[Route('/api/user/{id}', name: 'wire_test_api_user_read', methods: ['GET'])]
+    public function apiUserRead(int $id, EntityManagerInterface $em): \Symfony\Component\HttpFoundation\JsonResponse
     {
+        $user = $em->find(\App\Entity\User::class, $id);
+        if (!$user) {
+            throw $this->createNotFoundException();
+        }
+
         return new \Symfony\Component\HttpFoundation\JsonResponse([
-            'id'     => $id,
-            'method' => $request->getMethod(),
-            'body'   => json_decode($request->getContent(), true),
+            '__class' => \App\Entity\User::class,
+            '__id'    => $user->id,
+            'name'    => $user->name,
+            'email'   => $user->email,
+            'status'  => $user->status,
         ]);
+    }
+
+    #[Route('/api/user/{id}', name: 'wire_test_api_user_update', methods: ['PATCH'])]
+    public function apiUserUpdate(int $id, \Symfony\Component\HttpFoundation\Request $request, EntityManagerInterface $em): \Symfony\Component\HttpFoundation\JsonResponse
+    {
+        $user = $em->find(\App\Entity\User::class, $id);
+        if (!$user) {
+            throw $this->createNotFoundException();
+        }
+
+        $body = json_decode($request->getContent(), true) ?? [];
+        if (isset($body['name'])) {
+            $user->name = $body['name'];
+        }
+        if (isset($body['email'])) {
+            $user->email = $body['email'];
+        }
+        if (isset($body['status'])) {
+            $user->status = $body['status'];
+        }
+        $em->flush();
+
+        return new \Symfony\Component\HttpFoundation\JsonResponse([
+            '__class' => \App\Entity\User::class,
+            '__id'    => $user->id,
+            'name'    => $user->name,
+            'email'   => $user->email,
+            'status'  => $user->status,
+        ]);
+    }
+
+    #[Route('/entity-methods/{id}', name: 'wire_test_entity_methods')]
+    public function entityMethods(int $id, EntityManagerInterface $em): Response
+    {
+        $user = $em->find(\App\Entity\User::class, $id);
+        if (!$user) {
+            throw $this->createNotFoundException();
+        }
+
+        return $this->render('wire_test/entity_methods.html.twig', ['user' => $user]);
+    }
+
+    #[Route('/entity-methods-fixture', name: 'wire_test_entity_methods_fixture', methods: ['GET'])]
+    public function entityMethodsFixture(EntityManagerInterface $em): Response
+    {
+        $metadata = [$em->getClassMetadata(\App\Entity\User::class)];
+        $schemaTool = new SchemaTool($em);
+        $schemaTool->dropSchema($metadata);
+        $schemaTool->createSchema($metadata);
+
+        $user = new \App\Entity\User('Alice', 'alice@example.com', 'active');
+        $em->persist($user);
+        $em->flush();
+
+        return $this->redirectToRoute('wire_test_entity_methods', ['id' => $user->id]);
     }
 
     #[Route('/full/{id}', name: 'wire_test_full')]
