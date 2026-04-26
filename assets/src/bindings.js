@@ -2,11 +2,17 @@
 
 import { resolvePath } from './path.js';
 
+const BOOLEAN_ATTRS = new Set([
+    'hidden', 'disabled', 'readonly', 'required', 'checked',
+    'selected', 'multiple', 'autofocus', 'autoplay', 'controls',
+    'loop', 'muted', 'open', 'reversed',
+]);
+
 /**
  * Apply a resolved value to a DOM element according to the binding target.
  *
  * @param {HTMLElement} element
- * @param {string} target - "text" sets textContent, "value" sets .value, anything else sets an attribute
+ * @param {string} target - "text", "value", "innerHTML", a boolean attr name, or any HTML attribute
  * @param {unknown} value
  * @returns {void}
  */
@@ -15,6 +21,14 @@ export function applyBinding(element, target, value) {
         element.textContent = value ?? '';
     } else if (target === 'value') {
         element.value = value ?? '';
+    } else if (target === 'innerHTML') {
+        element.innerHTML = value ?? '';
+    } else if (BOOLEAN_ATTRS.has(target)) {
+        if (value) {
+            element.setAttribute(target, '');
+        } else {
+            element.removeAttribute(target);
+        }
     } else {
         element.setAttribute(target, value ?? '');
     }

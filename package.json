@@ -1,7 +1,27 @@
 {
   "name": "@sourecode/wire",
   "version": "0.1.0",
+  "description": "Reactive data binding for server-rendered HTML",
   "type": "module",
+  "license": "MIT",
+  "keywords": ["wire", "reactive", "data-binding", "twig", "symfony", "server-rendered"],
+  "homepage": "https://github.com/sourecode/wire",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sourecode/wire.git"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/wire.js",
+      "default": "./dist/wire.iife.js"
+    }
+  },
+  "main": "./dist/wire.iife.js",
+  "module": "./dist/wire.js",
+  "files": [
+    "dist",
+    "assets/src"
+  ],
   "scripts": {
     "build": "vite build",
     "dev": "vite build --watch",

@@ -1,9 +1,11 @@
 import { test, expect } from '@playwright/test';
 
 /**
- * Production mode tests — APP_DEBUG=0 server on port 8124.
+ * Production mode tests — APP_DEBUG=0 server on port 8124 (tests/harness-prod).
  * Scope IDs must be 8-character sha256 hex prefixes, not template paths.
  */
+
+test.use({ baseURL: 'http://localhost:8124' });
 
 test.beforeEach(async ({ page }) => {
     await page.goto('/wire-test/full-fixture');

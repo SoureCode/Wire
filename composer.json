@@ -2,6 +2,19 @@
     "name": "sourecode/wire",
     "description": "Reactive data binding for server-rendered HTML",
     "type": "symfony-bundle",
+    "license": "MIT",
+    "keywords": ["symfony", "twig", "wire", "reactive", "data-binding", "server-rendered"],
+    "homepage": "https://github.com/sourecode/wire",
+    "authors": [
+        {
+            "name": "Jason Schilling",
+            "email": "jason.schilling@hotmail.de"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/sourecode/wire/issues",
+        "source": "https://github.com/sourecode/wire"
+    },
     "require": {
         "php": ">=8.1",
         "symfony/http-kernel": "^7.0 || ^8.0",
@@ -19,6 +32,11 @@
     "autoload-dev": {
         "psr-4": {
             "SoureCode\\Wire\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "symfony": {
+            "require": "^7.0 || ^8.0"
         }
     },
     "scripts": {

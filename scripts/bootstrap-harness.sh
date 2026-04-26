@@ -2,12 +2,13 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-HARNESS="$ROOT/tests/harness"
 SRC="$ROOT/tests/harness-src"
+ENV="${1:-dev}"
+HARNESS="$ROOT/tests/harness/$ENV"
 
 cd "$ROOT"
 
-echo "==> Removing old harness..."
+echo "==> Removing old harness ($ENV)..."
 rm -rf "$HARNESS"
 
 echo "==> Creating fresh Symfony 8 app..."
@@ -17,7 +18,7 @@ echo "==> Patching composer.json..."
 tmp=$(mktemp)
 jq '
   .["minimum-stability"] = "dev" |
-  .repositories = [{"type": "path", "url": "../..", "options": {"symlink": true}}]
+  .repositories = [{"type": "path", "url": "../../..", "options": {"symlink": true}}]
 ' "$HARNESS/composer.json" > "$tmp" && mv "$tmp" "$HARNESS/composer.json"
 
 echo "==> Installing dependencies..."
@@ -34,7 +35,6 @@ composer require \
   --working-dir="$HARNESS"
 
 echo "==> Patching config..."
-# SQLite in-memory for tests — remove the PostgreSQL dbname_suffix
 sed -i '/dbname_suffix/d' "$HARNESS/config/packages/doctrine.yaml"
 
 echo "==> Patching .env.test..."

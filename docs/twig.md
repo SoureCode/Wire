@@ -45,6 +45,8 @@ Format: `data-wire="dot.path"` or `data-wire="dot.path:target"`.
 |--------|-----------|
 | *(omitted)* | Sets `element.textContent` |
 | `value` | Sets `element.value`; also enables two-way binding on form controls |
+| `innerHTML` | Sets `element.innerHTML` — use only with trusted data |
+| `hidden`, `disabled`, `readonly`, `required`, `checked`, … | Boolean attribute — sets (truthy value) or removes (falsy value) the attribute |
 | *(anything else)* | Sets the named HTML attribute via `setAttribute` |
 
 Multiple elements can bind to the same path — all update when the value changes.
