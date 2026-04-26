@@ -13,7 +13,6 @@ class WireBasicTest extends WireIntegrationTestCase
         $this->em->persist($user);
         $this->em->flush();
 
-        WireHelper::reset();
         $html = $this->twig->render('wire_test/user.html.twig', ['user' => $user]);
 
         $this->assertStringContainsString('<!-- wire-scope:wire_test/user.html.twig -->', $html);
@@ -32,18 +31,29 @@ class WireBasicTest extends WireIntegrationTestCase
         $this->assertSame('active', $data['user']['status']);
     }
 
+    public function testEntityHasIdentityTag(): void
+    {
+        $user = new User('Jason', 'jason@example.com');
+        $this->em->persist($user);
+        $this->em->flush();
+
+        $data = $this->wireData('wire_test/user.html.twig', ['user' => $user]);
+        $this->assertSame(User::class, $data['user']['__class']);
+        $this->assertSame($user->id, $data['user']['__id']);
+    }
+
     public function testSameEntityInTwoScopesProducesRef(): void
     {
         $user = new User('Shared', 'shared@example.com');
         $this->em->persist($user);
         $this->em->flush();
 
-        WireHelper::reset();
-        WireHelper::extract(['user' => $user], ['user.name', 'user.email'], 'scope1');
-        $result = WireHelper::extract(['owner' => $user], ['owner.name'], 'scope2');
+        $scopes = $this->wireDataAll('wire_test/cross_scope.html.twig', ['user' => $user]);
+        $this->assertCount(2, $scopes);
 
-        $this->assertArrayHasKey('$ref', $result['owner']);
-        $this->assertStringStartsWith('scope1#', $result['owner']['$ref']);
+        $this->assertSame('Shared', $scopes[0]['user']['name']);
+        $this->assertArrayHasKey('$ref', $scopes[1]['user']);
+        $this->assertSame('wire_test/_cross_a.html.twig#user', $scopes[1]['user']['$ref']);
     }
 
     public function testDebugScopeIdEqualsTemplateName(): void
@@ -71,7 +81,6 @@ class WireBasicTest extends WireIntegrationTestCase
         $this->em->persist($user);
         $this->em->flush();
 
-        WireHelper::reset();
         $html = $this->twig->render('wire_test/user.html.twig', ['user' => $user]);
 
         $this->assertStringContainsString('<!-- wire-scope:wire_test/user.html.twig -->', $html);

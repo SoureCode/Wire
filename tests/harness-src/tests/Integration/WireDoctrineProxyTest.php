@@ -2,9 +2,8 @@
 
 namespace App\Tests\Integration;
 
-use App\Entity\User;
 use App\Entity\Address;
-use SoureCode\Wire\WireHelper;
+use App\Entity\User;
 
 class WireDoctrineProxyTest extends WireIntegrationTestCase
 {
@@ -21,9 +20,11 @@ class WireDoctrineProxyTest extends WireIntegrationTestCase
         $data = $this->wireData('wire_test/user.html.twig', ['user' => $proxy]);
         $this->assertSame('Proxy User', $data['user']['name']);
         $this->assertSame('proxy@example.com', $data['user']['email']);
+        $this->assertSame(User::class, $data['user']['__class']);
+        $this->assertSame($id, $data['user']['__id']);
     }
 
-    public function testGhostProxyPreservesIdentityAcrossScopes(): void
+    public function testGhostProxyInTwoScopesProducesRef(): void
     {
         $user = new User('Ghost', 'ghost@example.com');
         $this->em->persist($user);
@@ -33,12 +34,10 @@ class WireDoctrineProxyTest extends WireIntegrationTestCase
         $this->em->clear();
         $proxy = $this->em->getReference(User::class, $id);
 
-        WireHelper::reset();
-        WireHelper::extract(['user' => $proxy], ['user.name', 'user.email'], 'scope1');
-        $result = WireHelper::extract(['owner' => $proxy], ['owner.name'], 'scope2');
-
-        $this->assertArrayHasKey('$ref', $result['owner']);
-        $this->assertStringStartsWith('scope1#', $result['owner']['$ref']);
+        $scopes = $this->wireDataAll('wire_test/cross_scope.html.twig', ['user' => $proxy]);
+        $this->assertCount(2, $scopes);
+        $this->assertArrayHasKey('$ref', $scopes[1]['user']);
+        $this->assertSame('wire_test/_cross_a.html.twig#user', $scopes[1]['user']['$ref']);
     }
 
     public function testLazyManyToOneProxyIsInitializedByWire(): void
@@ -60,7 +59,7 @@ class WireDoctrineProxyTest extends WireIntegrationTestCase
         $this->assertSame('Main St', $data['user']['address']['street']);
     }
 
-    public function testDoctrineIdentityMapReturnsSameProxyObject(): void
+    public function testDoctrineIdentityMapSharedAddressCarriesSameIdentity(): void
     {
         $address = new Address('Same St', 'Cologne', '50667');
         $user1   = new User('A', 'a@example.com');
@@ -77,13 +76,11 @@ class WireDoctrineProxyTest extends WireIntegrationTestCase
         $a = $this->em->find(User::class, $user1->id);
         $b = $this->em->find(User::class, $user2->id);
 
-        $addrA = $a->address;
-        $addrB = $b->address;
-        $this->assertSame($addrA, $addrB, 'Doctrine identity map must return same object');
-
-        WireHelper::reset();
-        WireHelper::extract(['user' => $a], ['user.address.city'], 'scope1');
-        $result = WireHelper::extract(['user' => $b], ['user.address.city'], 'scope2');
-        $this->assertArrayHasKey('$ref', $result['user']['address']);
+        $scopes = $this->wireDataAll('wire_test/multi.html.twig', ['users' => [$a, $b]]);
+        $this->assertCount(2, $scopes);
+        $this->assertSame(
+            $scopes[0]['user']['address']['__id'],
+            $scopes[1]['user']['address']['__id']
+        );
     }
 }

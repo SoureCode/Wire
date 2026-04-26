@@ -8,6 +8,7 @@ use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Tools\SchemaTool;
 use SoureCode\Wire\WireHelper;
+use SoureCode\Wire\WireRuntime;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
@@ -17,12 +18,14 @@ abstract class WireIntegrationTestCase extends KernelTestCase
 {
     protected EntityManagerInterface $em;
     protected Environment $twig;
+    protected WireRuntime $runtime;
 
     protected function setUp(): void
     {
         self::bootKernel();
-        $this->em   = static::getContainer()->get(EntityManagerInterface::class);
-        $this->twig = static::getContainer()->get(Environment::class);
+        $this->em      = static::getContainer()->get(EntityManagerInterface::class);
+        $this->twig    = static::getContainer()->get(Environment::class);
+        $this->runtime = static::getContainer()->get(WireRuntime::class);
 
         static::getContainer()->get(RequestStack::class)->push(Request::create('/'));
 
@@ -33,6 +36,7 @@ abstract class WireIntegrationTestCase extends KernelTestCase
         ]);
 
         WireHelper::reset();
+        $this->runtime->reset();
     }
 
     protected function tearDown(): void
@@ -46,12 +50,29 @@ abstract class WireIntegrationTestCase extends KernelTestCase
         parent::tearDown();
     }
 
+    /**
+     * Render a template and return the first wire scope's decoded JSON.
+     */
     protected function wireData(string $template, array $context): array
     {
-        WireHelper::reset();
+        $this->runtime->reset();
         $html = $this->twig->render($template, $context);
         preg_match('/<script type="wire">(.*?)<\/script>/s', $html, $m);
         $this->assertNotEmpty($m, "No wire script tag found in $template");
         return json_decode($m[1], true);
+    }
+
+    /**
+     * Render a template and return decoded JSON for every wire scope, in order.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    protected function wireDataAll(string $template, array $context): array
+    {
+        $this->runtime->reset();
+        $html = $this->twig->render($template, $context);
+        preg_match_all('/<script type="wire">(.*?)<\/script>/s', $html, $m);
+        $this->assertNotEmpty($m[1], "No wire script tags found in $template");
+        return array_map(fn (string $json) => json_decode($json, true), $m[1]);
     }
 }

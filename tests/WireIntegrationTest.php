@@ -2,12 +2,10 @@
 
 namespace SoureCode\Wire\Tests;
 
-use Doctrine\Persistence\ManagerRegistry;
 use PHPUnit\Framework\TestCase;
 use SoureCode\Wire\WireExtension;
 use SoureCode\Wire\WireHelper;
 use SoureCode\Wire\WireRuntime;
-use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
 use Symfony\Component\Serializer\Serializer;
 use Twig\Environment;
@@ -27,12 +25,7 @@ class WireIntegrationTest extends TestCase
         $twig   = new Environment($loader, ['debug' => $debug]);
         $twig->addExtension(new WireExtension());
 
-        $runtime = new WireRuntime(
-            new Serializer([new ObjectNormalizer()]),
-            $this->createStub(ManagerRegistry::class),
-            $this->createStub(UrlGeneratorInterface::class),
-            $debug,
-        );
+        $runtime = new WireRuntime(new Serializer([new ObjectNormalizer()]));
 
         $twig->addRuntimeLoader(new FactoryRuntimeLoader([
             WireRuntime::class => fn () => $runtime,
