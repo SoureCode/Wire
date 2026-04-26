@@ -138,17 +138,19 @@ class WireRuntime implements RuntimeExtensionInterface, ResetInterface
             if (is_object($value)) {
                 $oid = spl_object_id($value);
 
-                if (isset($localSeen[$oid])) {
+                if (isset($localSeen[$oid]) && $localSeen[$oid] !== $currentPath) {
                     $resultRef[$key] = ['$ref' => $localSeen[$oid]];
                     return;
                 }
-                if (isset($this->globalSeen[$oid])) {
+                if (isset($this->globalSeen[$oid]) && $this->globalSeen[$oid] !== $scopeId . '#' . $currentPath) {
                     $resultRef[$key] = ['$ref' => $this->globalSeen[$oid]];
                     return;
                 }
 
-                $localSeen[$oid]        = $currentPath;
-                $this->globalSeen[$oid] = $scopeId . '#' . $currentPath;
+                if (!isset($localSeen[$oid])) {
+                    $localSeen[$oid]        = $currentPath;
+                    $this->globalSeen[$oid] = $scopeId . '#' . $currentPath;
+                }
 
                 if (!isset($resultRef[$key]) || !is_array($resultRef[$key])) {
                     $resultRef[$key] = [];
@@ -183,15 +185,17 @@ class WireRuntime implements RuntimeExtensionInterface, ResetInterface
     {
         $oid = spl_object_id($value);
 
-        if (isset($localSeen[$oid])) {
+        if (isset($localSeen[$oid]) && $localSeen[$oid] !== $currentPath) {
             return ['$ref' => $localSeen[$oid]];
         }
-        if (isset($this->globalSeen[$oid])) {
+        if (isset($this->globalSeen[$oid]) && $this->globalSeen[$oid] !== $scopeId . '#' . $currentPath) {
             return ['$ref' => $this->globalSeen[$oid]];
         }
 
-        $localSeen[$oid]        = $currentPath;
-        $this->globalSeen[$oid] = $scopeId . '#' . $currentPath;
+        if (!isset($localSeen[$oid])) {
+            $localSeen[$oid]        = $currentPath;
+            $this->globalSeen[$oid] = $scopeId . '#' . $currentPath;
+        }
 
         $tag = $this->identity->tag($value);
         return $tag ?? [];
@@ -201,6 +205,10 @@ class WireRuntime implements RuntimeExtensionInterface, ResetInterface
     {
         if (is_array($current)) {
             return array_key_exists($key, $current) ? $current[$key] : null;
+        }
+
+        if ($current instanceof \stdClass) {
+            return property_exists($current, $key) ? $current->$key : null;
         }
 
         if (is_object($current)) {
