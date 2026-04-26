@@ -19,6 +19,8 @@ class WireNodeVisitor implements NodeVisitorInterface
     /** @var array<string, array<string, true>> */
     private array $templatePaths = [];
     private array $templateOptIn = [];
+    /** @var array<string, string[]> */
+    private array $templateGroups = [];
     private array $templateCascade = [];
     private array $cascadeChildren = [];
     private static array $globalCascadeChildren = [];
@@ -42,6 +44,10 @@ class WireNodeVisitor implements NodeVisitorInterface
     {
         if ($node instanceof WireOptInNode) {
             $this->templateOptIn[$this->currentTemplate] = true;
+            $existing = $this->templateGroups[$this->currentTemplate] ?? [];
+            $this->templateGroups[$this->currentTemplate] = array_values(array_unique(
+                array_merge($existing, $node->getAttribute('groups'))
+            ));
             if ($node->getAttribute('cascade')) {
                 $this->templateCascade[$this->currentTemplate] = true;
             }
@@ -76,8 +82,9 @@ class WireNodeVisitor implements NodeVisitorInterface
                 $this->wrapTextContentPrints($node);
                 (new WireAttrInjector())->process($node);
 
+                $groups = $this->templateGroups[$templateName] ?? [];
                 $node->setNode('display_start', new Nodes([
-                    new WireScopeStartNode($templateName, $paths, $node->getTemplateLine()),
+                    new WireScopeStartNode($templateName, $paths, $groups, $node->getTemplateLine()),
                     $node->getNode('display_start'),
                 ]));
                 $node->setNode('display_end', new Nodes([

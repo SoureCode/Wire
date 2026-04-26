@@ -11,6 +11,7 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Extension\Extension;
 use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\Routing\RouterInterface;
+use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
 
 class WireExtension extends Extension
 {
@@ -38,6 +39,7 @@ class WireExtension extends Extension
         $container->register(WireRuntime::class)
             ->setArguments([
                 new Reference(WireIdentityResolver::class),
+                new Reference(NormalizerInterface::class),
             ])
             ->addTag('twig.runtime')
             ->addTag('kernel.reset', ['method' => 'reset'])

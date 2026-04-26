@@ -4,6 +4,7 @@ namespace SoureCode\Wire;
 
 use Symfony\Component\PropertyAccess\PropertyAccess;
 use Symfony\Component\PropertyAccess\PropertyAccessorInterface;
+use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
 use Symfony\Contracts\Service\ResetInterface;
 use Twig\Extension\RuntimeExtensionInterface;
 
@@ -16,6 +17,7 @@ class WireRuntime implements RuntimeExtensionInterface, ResetInterface
 
     public function __construct(
         private readonly WireIdentityResolver $identity,
+        private readonly NormalizerInterface $serializer,
     ) {
         $this->accessor = PropertyAccess::createPropertyAccessor();
     }
@@ -29,10 +31,16 @@ class WireRuntime implements RuntimeExtensionInterface, ResetInterface
     /**
      * @param array<string,mixed> $context full Twig $context
      * @param string[]            $paths   bound dot-paths collected by the visitor
+     * @param string[]            $groups  optional Symfony Serializer groups for additive expansion
      */
-    public function renderScope(array $context, array $paths, string $scopeId): string
+    public function renderScope(array $context, array $paths, string $scopeId, array $groups = []): string
     {
         $data = $this->buildScopeData($context, $paths, $scopeId);
+
+        if ($groups !== []) {
+            $this->augmentWithGroups($data, $context, $groups);
+        }
+
         if ($data === []) {
             return '';
         }
@@ -56,6 +64,40 @@ class WireRuntime implements RuntimeExtensionInterface, ResetInterface
         }
 
         return $result;
+    }
+
+    /**
+     * For each top-level scope variable that resolves to an object in the
+     * Twig context, normalize that object with the configured groups and
+     * fill any keys not already present in the path-walked payload.
+     *
+     * @param array<string,mixed> $data
+     * @param array<string,mixed> $context
+     * @param string[]            $groups
+     */
+    private function augmentWithGroups(array &$data, array $context, array $groups): void
+    {
+        foreach ($data as $rootName => $rootValue) {
+            if (!is_array($rootValue) || isset($rootValue['$ref'])) {
+                continue;
+            }
+
+            $object = $context[$rootName] ?? null;
+            if (!is_object($object) || $object instanceof \stdClass) {
+                continue;
+            }
+
+            $additional = $this->serializer->normalize($object, null, ['groups' => $groups]);
+            if (!is_array($additional)) {
+                continue;
+            }
+
+            foreach ($additional as $k => $v) {
+                if (!array_key_exists($k, $data[$rootName])) {
+                    $data[$rootName][$k] = $v;
+                }
+            }
+        }
     }
 
     /**
@@ -125,8 +167,6 @@ class WireRuntime implements RuntimeExtensionInterface, ResetInterface
                     $resultRef[$key] = [];
                 }
             } else {
-                // Scalar at non-leaf position — bound paths reach into it
-                // make no sense; leave previous slot alone.
                 return;
             }
 
@@ -136,10 +176,6 @@ class WireRuntime implements RuntimeExtensionInterface, ResetInterface
     }
 
     /**
-     * Tag a leaf object value with its identity (when applicable) and check
-     * for $ref dedup. Returns either an array (with __class/__id/...) or a
-     * `$ref` placeholder.
-     *
      * @param array<int,string> $localSeen in/out
      * @return array<string,mixed>
      */
@@ -161,10 +197,6 @@ class WireRuntime implements RuntimeExtensionInterface, ResetInterface
         return $tag ?? [];
     }
 
-    /**
-     * Read `$key` out of `$current`. Arrays use index lookup; objects
-     * fall through to PropertyAccessor (covers public properties + getters).
-     */
     private function fetch(mixed $current, string $key): mixed
     {
         if (is_array($current)) {

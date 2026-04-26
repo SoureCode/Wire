@@ -7,9 +7,15 @@ use Twig\Node\Node;
 
 class WireOptInNode extends Node
 {
-    public function __construct(int $lineno, bool $cascade = false)
+    /**
+     * @param string[] $groups
+     */
+    public function __construct(int $lineno, bool $cascade = false, array $groups = [])
     {
-        parent::__construct([], ['cascade' => $cascade], $lineno);
+        parent::__construct([], [
+            'cascade' => $cascade,
+            'groups'  => $groups,
+        ], $lineno);
     }
 
     public function compile(Compiler $compiler): void
