@@ -27,9 +27,13 @@ class WireTestController extends AbstractController
     }
 
     #[Route('/user/{id}/save', name: 'wire_test_user_save', methods: ['PUT'])]
-    public function userSave(int $id): Response
+    public function userSave(int $id, \Symfony\Component\HttpFoundation\Request $request): \Symfony\Component\HttpFoundation\JsonResponse
     {
-        return new Response('', Response::HTTP_NO_CONTENT);
+        return new \Symfony\Component\HttpFoundation\JsonResponse([
+            'id'     => $id,
+            'method' => $request->getMethod(),
+            'body'   => json_decode($request->getContent(), true),
+        ]);
     }
 
     #[Route('/full/{id}', name: 'wire_test_full')]
