@@ -1,62 +1,32 @@
 import { parseScopes, setupMutationObserver } from './src/dom.js';
-import { snapshot as snapshotScopes } from './src/snapshot.js';
+import { findScopeFor } from './src/scope.js';
 import { stripIdentityTags } from './src/identity.js';
 import { deepClone } from './src/utils/deepClone.js';
 
-/** @import { Scope } from './src/types.js' */
-
-/** @type {Scope[]} */
-const scopes = [];
+/** @import { ScopeHandle } from './src/types.js' */
 
 /**
  * Initialise Wire: parse all scopes in the current document and start
  * observing for dynamically added elements.
- *
- * @returns {void}
  */
 export function init() {
-    parseScopes(scopes);
-    setupMutationObserver(scopes);
+    parseScopes();
+    setupMutationObserver();
 }
 
 /**
- * Return the reactive proxy for the nth scope with the given name.
+ * Return the scope handle for the scope containing `element`.
+ * `scope.get('user')` returns the reactive proxy for the Twig variable `user`.
  *
- * @param {string} name
- * @param {number} [index]
- * @returns {Record<string, unknown>|undefined}
+ * @param {Element} element
+ * @returns {ScopeHandle|null}
  */
-export function get(name, index = 0) {
-    return scopes.filter(scope => scope.name === name)[index]?.proxy;
+export function getScope(element) {
+    return findScopeFor(element)?.handle ?? null;
 }
 
 /**
- * Return reactive proxies for every scope matching `name`.
- *
- * @param {string} name
- * @returns {Array<Record<string, unknown>>}
- */
-export function getAll(name) {
-    return scopes.filter(scope => scope.name === name).map(scope => scope.proxy);
-}
-
-/**
- * Return a deep-cloned snapshot of one or all scope data trees, with all
- * identity tags stripped.
- *
- * @param {string} [name]
- * @returns {Array<{scope: string, data: unknown}>|unknown|null}
- */
-export function snapshot(name) {
-    return snapshotScopes(scopes, name);
-}
-
-/**
- * Submit an identified value (entity proxy) to its server-side route.
- *
- * The value must carry a `__submit` URL emitted at render time from a
- * Doctrine-managed entity decorated with `#[Wire(submit: 'route_name')]`.
- * Identity tags are stripped from the payload before sending.
+ * Submit an entity proxy to its server-side route.
  *
  * @param {Record<string, unknown>} value - a proxy or plain object carrying `__submit`
  * @param {RequestInit} [options]

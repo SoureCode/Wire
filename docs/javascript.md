@@ -35,37 +35,40 @@ user.name = 'Alice';  // → all data-wire="user.name" elements update
 
 ### `Wire.getAll(name)`
 
-Returns an array of all proxies for the given scope name.
-
-```js
-const items = Wire.getAll('wire_test/item.html.twig');
-items[0].name = 'First';
-items[1].name = 'Second';
-```
-
-Returns `[]` if no scopes match.
+Returns an array of all proxies for the given scope name. Returns `[]` if no scopes match.
 
 ### `Wire.snapshot(name?)`
 
-Returns a deep clone of the current scope data, with all `{$ref}` aliases resolved.
+Returns a deep clone of the current scope data with all `$ref` aliases resolved and all identity tags (`__class`, `__id`, `__submit`) stripped — i.e. the user-visible data shape.
 
 ```js
-// Single scope
 const data = Wire.snapshot('wire_test/profile.html.twig');
 console.log(data.user.name);  // "Alice"
 
-// All scopes
 const all = Wire.snapshot();
 // → [{ scope: 'wire_test/profile.html.twig', data: { user: {...} } }, ...]
 ```
 
-- Returns `null` for an unknown scope name.
-- The returned object is a deep clone — mutations do not affect live data.
-- Safe to serialise to JSON and send to the server.
+Returns `null` for an unknown scope name.
+
+### `Wire.submit(value, options?)`
+
+Posts an identified entity back to its server-side route.
+
+```js
+const user = Wire.get('wire_test/profile.html.twig').user;
+await Wire.submit(user);
+```
+
+`value` must carry a `__submit` tag — i.e. it was rendered from a Doctrine entity decorated with `#[Wire(submit: 'route_name')]`. The URL and HTTP method are read from the tag (server resolves both at render time from the route definition). Identity tags are stripped from the request body.
+
+`options` accepts any `RequestInit` field. `url`, `method`, and `headers` are merged with the server-emitted defaults — anything else (signal, credentials, …) passes straight to `fetch`.
+
+Throws if `value` has no `__submit` tag.
 
 ### `Wire.init()`
 
-Parses all scopes in the current document and starts the mutation observer for dynamically added elements. Called automatically on `DOMContentLoaded`. Safe to call again if new scope markup is injected into the page.
+Parses all scopes in the current document and starts the mutation observer. Called automatically on `DOMContentLoaded`. Safe to call again if new scope markup is injected.
 
 ## Reactive Proxy
 
@@ -73,66 +76,36 @@ Parses all scopes in the current document and starts the mutation observer for d
 
 ```js
 const proxy = Wire.get(scope);
-
 proxy.user.name = 'Bob';           // updates data-wire="user.name"
-proxy.user.address.city = 'Paris'; // updates data-wire="user.address.city"
-                                    // and data-wire="user.address"
-                                    // and data-wire="user"
+proxy.user.address.city = 'Paris'; // updates city, address, and user bindings
 ```
 
 ## Two-way Binding
 
-Elements with `data-wire="path:value"` get an `input` event listener. Typing into the element writes the new value back to the scope proxy, which propagates to all other elements bound to the same path.
+Elements with `data-wire="path:value"` get an `input` event listener. Typing writes the new value into the proxy, which propagates to every other element bound to the same path.
 
-```twig
-<input data-wire="user.name:value" value="{{ user.name }}">
-<h1 data-wire="user.name">{{ user.name }}</h1>
-```
+## Identity-based Dedup
 
-Typing in the input updates the `h1` in real time. Setting `proxy.user.name` programmatically also updates the input's value.
+Each rendered entity carries a `__class` + `__id` tag. After parsing, Wire walks every scope's data tree and collapses any objects sharing identity into one canonical JS object. Existing cross-scope refMap then propagates mutations: changing a field on the entity in one scope updates every binding in every scope that referenced it.
+
+For top-level same-instance roots (the common case where the *same* `User` is the root variable in two scopes), the server already emits a `$ref` so the second scope reuses the first scope's data directly.
 
 ## Scope Names
 
-In debug mode (`APP_DEBUG=1`), scope names equal the Twig template path:
-
-```js
-Wire.get('wire_test/user.html.twig')
-```
-
-In production (`APP_DEBUG=0`), they are 8-character sha256 hex prefixes. To write code that works in both modes, read the scope name from the DOM:
+In debug mode (`APP_DEBUG=1`), scope names equal the Twig template path. In production (`APP_DEBUG=0`), they are 8-character sha256 hex prefixes. To write code that works in both modes, read the scope name from the DOM:
 
 ```js
 function getScopeName() {
     const walker = document.createTreeWalker(document, NodeFilter.SHOW_COMMENT);
     let node;
-
     while ((node = walker.nextNode())) {
         const text = node.textContent.trim();
-
-        if (text.startsWith('wire-scope:')) {
-            return text.slice('wire-scope:'.length);
-        }
+        if (text.startsWith('wire-scope:')) return text.slice('wire-scope:'.length);
     }
-
     return null;
 }
 
 const proxy = Wire.get(getScopeName());
 ```
 
-Or use `Wire.snapshot()` (no args) to enumerate all active scope names:
-
-```js
-const scopes = Wire.snapshot();
-const scopeName = scopes[0].scope;
-```
-
-## Cross-scope Updates
-
-When the same PHP object appears in two templates, Wire links them via a shared JS object reference. Mutating the proxy in one scope automatically updates bindings in the other scope.
-
-```js
-Wire.get('parent_template.html.twig').user.name = 'Bob';
-// → also updates all data-wire="user.name" bindings in child templates
-//   that reference the same user object via {$ref}
-```
+Or enumerate via `Wire.snapshot()` (no args).

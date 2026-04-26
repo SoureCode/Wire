@@ -1,14 +1,10 @@
 import { test, expect } from '@playwright/test';
 
-const SCOPE = 'wire_test/full.html.twig';
+const ANCHOR = '#name-heading';
 
 test.beforeEach(async ({ page }) => {
     await page.goto('/wire-test/full-fixture');
 });
-
-// ---------------------------------------------------------------------------
-// MutationObserver — dynamically added elements inside a scope are registered
-// ---------------------------------------------------------------------------
 
 test.describe('dynamic element registration', () => {
     test('dynamically added element gets updated on next mutation', async ({ page }) => {
@@ -20,7 +16,7 @@ test.describe('dynamic element registration', () => {
             document.body.prepend(span);
         });
 
-        await page.evaluate((scope) => { window.Wire.get(scope).user.name = 'Dynamic'; }, SCOPE);
+        await page.evaluate((sel) => { window.Wire.getScope(document.querySelector(sel)).get('user').name = 'Dynamic'; }, ANCHOR);
 
         await expect(page.locator('#dynamic-text')).toHaveText('Dynamic');
     });
@@ -48,7 +44,7 @@ test.describe('dynamic element registration', () => {
             }
         });
 
-        await page.evaluate((scope) => { window.Wire.get(scope).user.name = 'Dynamic'; }, SCOPE);
+        await page.evaluate((sel) => { window.Wire.getScope(document.querySelector(sel)).get('user').name = 'Dynamic'; }, ANCHOR);
 
         await expect(page.locator('.dynamic-name')).toHaveCount(3);
 
@@ -65,8 +61,8 @@ test.describe('dynamic element registration', () => {
             document.body.prepend(span);
         });
 
-        await page.evaluate((scope) => { window.Wire.get(scope).user.name = 'First'; }, SCOPE);
-        await page.evaluate((scope) => { window.Wire.get(scope).user.name = 'Second'; }, SCOPE);
+        await page.evaluate((sel) => { window.Wire.getScope(document.querySelector(sel)).get('user').name = 'First'; }, ANCHOR);
+        await page.evaluate((sel) => { window.Wire.getScope(document.querySelector(sel)).get('user').name = 'Second'; }, ANCHOR);
 
         await expect(page.locator('#dynamic-text')).toHaveText('Second');
     });
@@ -79,7 +75,7 @@ test.describe('dynamic element registration', () => {
             document.body.prepend(div);
         });
 
-        await page.evaluate((scope) => { window.Wire.get(scope).user.name = 'Changed'; }, SCOPE);
+        await page.evaluate((sel) => { window.Wire.getScope(document.querySelector(sel)).get('user').name = 'Changed'; }, ANCHOR);
 
         await expect(page.locator('#no-wire-attr')).toHaveText('untouched');
     });
@@ -92,7 +88,7 @@ test.describe('dynamic element registration', () => {
             document.body.prepend(div);
         });
 
-        await page.evaluate((scope) => { window.Wire.get(scope).user.status = 'pending'; }, SCOPE);
+        await page.evaluate((sel) => { window.Wire.getScope(document.querySelector(sel)).get('user').status = 'pending'; }, ANCHOR);
 
         await expect(page.locator('#dynamic-attr')).toHaveAttribute('class', 'pending');
     });
@@ -107,7 +103,7 @@ test.describe('dynamic element registration', () => {
             document.body.prepend(container);
         });
 
-        await page.evaluate((scope) => { window.Wire.get(scope).user.name = 'Bulk'; }, SCOPE);
+        await page.evaluate((sel) => { window.Wire.getScope(document.querySelector(sel)).get('user').name = 'Bulk'; }, ANCHOR);
 
         for (const el of await page.locator('.bulk-name').all()) {
             await expect(el).toHaveText('Bulk');
@@ -115,16 +111,11 @@ test.describe('dynamic element registration', () => {
     });
 });
 
-// ---------------------------------------------------------------------------
-// Wire.init() — safe to call again after dynamic content injection
-// ---------------------------------------------------------------------------
-
 test.describe('Wire.init() re-call', () => {
     test('Wire.init() is safe to call again without errors', async ({ page }) => {
         const error = await page.evaluate(() => {
             try {
                 window.Wire.init();
-
                 return null;
             } catch (e) {
                 return e.message;
@@ -136,8 +127,7 @@ test.describe('Wire.init() re-call', () => {
 
     test('existing bindings still work after Wire.init() re-call', async ({ page }) => {
         await page.evaluate(() => window.Wire.init());
-        await page.evaluate((scope) => { window.Wire.get(scope).user.name = 'AfterInit'; }, SCOPE);
-
+        await page.evaluate((sel) => { window.Wire.getScope(document.querySelector(sel)).get('user').name = 'AfterInit'; }, ANCHOR);
         await expect(page.locator('#name-heading')).toHaveText('AfterInit');
     });
 });

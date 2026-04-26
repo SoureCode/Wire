@@ -1,4 +1,4 @@
-/** @import { ScopeSnapshot, ScopeRefs } from '../../src/types.js' */
+/** @import { ScopeSnapshot, ScopeBindings } from '../../src/types.js' */
 
 import { describe, it, expect } from 'vitest';
 import { resolveRefs, buildRefMap, buildCrossScopeRefs } from '../../src/refs.js';
@@ -69,10 +69,10 @@ describe('buildRefMap', () => {
 describe('buildCrossScopeRefs', () => {
     it('adds cross-scope alias when the same object appears in two scopes', () => {
         const shared = { city: 'Berlin' };
-        /** @type {ScopeRefs} */
-        const scope1 = { name: 'scope1', data: { address: shared }, refMap: {} };
-        /** @type {ScopeRefs} */
-        const scope2 = { name: 'scope2', data: { location: shared }, refMap: {} };
+        /** @type {ScopeBindings} */
+        const scope1 = { data: { address: shared }, bindings: [], refMap: {} };
+        /** @type {ScopeBindings} */
+        const scope2 = { data: { location: shared }, bindings: [], refMap: {} };
 
         buildCrossScopeRefs([scope1, scope2]);
 
@@ -82,8 +82,8 @@ describe('buildCrossScopeRefs', () => {
 
     it('does not add self-aliases', () => {
         const obj = { city: 'Berlin' };
-        /** @type {ScopeRefs} */
-        const scope1 = { name: 'scope1', data: { address: obj }, refMap: {} };
+        /** @type {ScopeBindings} */
+        const scope1 = { data: { address: obj }, bindings: [], refMap: {} };
 
         buildCrossScopeRefs([scope1]);
 

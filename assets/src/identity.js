@@ -1,5 +1,3 @@
-/** @import { Scope } from './types.js' */
-
 import { isPlainObject } from './utils/isPlainObject.js';
 
 /**
@@ -11,7 +9,7 @@ import { isPlainObject } from './utils/isPlainObject.js';
  * Fields from later occurrences are merged into the canonical instance so
  * no data is lost when scopes expose different field subsets.
  *
- * @param {Scope[]} scopes
+ * @param {Array<{ data: Record<string, unknown> }>} scopes
  * @returns {Map<string, Record<string, unknown>>} identity → canonical object
  */
 export function unifyByIdentity(scopes) {

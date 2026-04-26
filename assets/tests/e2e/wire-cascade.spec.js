@@ -1,15 +1,11 @@
 import { test, expect } from '@playwright/test';
 
-const PARENT_SCOPE = 'wire_test/cascade_parent.html.twig';
-const CHILD_SCOPE = 'wire_test/cascade_child.html.twig';
+const PARENT_ANCHOR = '#cascade-parent-name';
+const CHILD_ANCHOR = '#cascade-child-name';
 
 test.beforeEach(async ({ page }) => {
     await page.goto('/wire-test/cascade-fixture');
 });
-
-// ---------------------------------------------------------------------------
-// Initial render — both parent and child are scoped
-// ---------------------------------------------------------------------------
 
 test.describe('initial render', () => {
     test('parent renders name', async ({ page }) => {
@@ -29,139 +25,89 @@ test.describe('initial render', () => {
     });
 });
 
-// ---------------------------------------------------------------------------
-// Both scopes are registered with Wire
-// ---------------------------------------------------------------------------
-
 test.describe('Wire scope registration', () => {
-    test('parent scope comment is present in DOM', async ({ page }) => {
-        const found = await page.evaluate((scope) => {
+    test('two wire-scope start markers exist (parent + child)', async ({ page }) => {
+        const count = await page.evaluate(() => {
             const walker = document.createTreeWalker(document, NodeFilter.SHOW_COMMENT);
-            let node;
-
+            let node, n = 0;
             while ((node = walker.nextNode())) {
-                if (node.textContent.trim() === `wire-scope:${scope}`) {
-                    return true;
-                }
+                if (node.textContent.trim().startsWith('wire-scope:')) n++;
             }
-
-            return false;
-        }, PARENT_SCOPE);
-
-        expect(found).toBe(true);
+            return n;
+        });
+        expect(count).toBe(2);
     });
 
-    test('child scope comment is present in DOM (cascade worked)', async ({ page }) => {
-        const found = await page.evaluate((scope) => {
-            const walker = document.createTreeWalker(document, NodeFilter.SHOW_COMMENT);
-            let node;
-
-            while ((node = walker.nextNode())) {
-                if (node.textContent.trim() === `wire-scope:${scope}`) {
-                    return true;
-                }
-            }
-
-            return false;
-        }, CHILD_SCOPE);
-
-        expect(found).toBe(true);
-    });
-
-    test('Wire.get(parentScope) returns object', async ({ page }) => {
-        const type = await page.evaluate((scope) => typeof window.Wire.get(scope), PARENT_SCOPE);
-
+    test('parent anchor has its own scope', async ({ page }) => {
+        const type = await page.evaluate((sel) => typeof window.Wire.getScope(document.querySelector(sel)), PARENT_ANCHOR);
         expect(type).toBe('object');
     });
 
-    test('Wire.get(childScope) returns object', async ({ page }) => {
-        const type = await page.evaluate((scope) => typeof window.Wire.get(scope), CHILD_SCOPE);
-
+    test('child anchor has its own scope', async ({ page }) => {
+        const type = await page.evaluate((sel) => typeof window.Wire.getScope(document.querySelector(sel)), CHILD_ANCHOR);
         expect(type).toBe('object');
-    });
-
-    test('both scopes appear in Wire.snapshot() all-scopes', async ({ page }) => {
-        const all = await page.evaluate(() => window.Wire.snapshot());
-        const names = all.map(s => s.scope);
-
-        expect(names).toContain(PARENT_SCOPE);
-        expect(names).toContain(CHILD_SCOPE);
     });
 });
 
-// ---------------------------------------------------------------------------
-// Cross-scope propagation via cascade (shared user object)
-// ---------------------------------------------------------------------------
-
 test.describe('cross-scope propagation', () => {
-    test('mutating parent proxy updates parent DOM', async ({ page }) => {
-        await page.evaluate((scope) => { window.Wire.get(scope).user.name = 'Bob'; }, PARENT_SCOPE);
-
+    test('mutating parent user updates parent DOM', async ({ page }) => {
+        await page.evaluate((sel) => { window.Wire.getScope(document.querySelector(sel)).get('user').name = 'Bob'; }, PARENT_ANCHOR);
         await expect(page.locator('#cascade-parent-name')).toHaveText('Bob');
     });
 
-    test('mutating parent proxy updates child DOM', async ({ page }) => {
-        await page.evaluate((scope) => { window.Wire.get(scope).user.name = 'Bob'; }, PARENT_SCOPE);
-
+    test('mutating parent user updates child DOM', async ({ page }) => {
+        await page.evaluate((sel) => { window.Wire.getScope(document.querySelector(sel)).get('user').name = 'Bob'; }, PARENT_ANCHOR);
         await expect(page.locator('#cascade-child-name')).toHaveText('Bob');
     });
 
-    test('mutating child proxy updates child DOM', async ({ page }) => {
-        await page.evaluate((scope) => { window.Wire.get(scope).user.name = 'Alice'; }, CHILD_SCOPE);
-
+    test('mutating child user updates child DOM', async ({ page }) => {
+        await page.evaluate((sel) => { window.Wire.getScope(document.querySelector(sel)).get('user').name = 'Alice'; }, CHILD_ANCHOR);
         await expect(page.locator('#cascade-child-name')).toHaveText('Alice');
     });
 
-    test('mutating child proxy updates parent DOM', async ({ page }) => {
-        await page.evaluate((scope) => { window.Wire.get(scope).user.name = 'Alice'; }, CHILD_SCOPE);
-
+    test('mutating child user updates parent DOM', async ({ page }) => {
+        await page.evaluate((sel) => { window.Wire.getScope(document.querySelector(sel)).get('user').name = 'Alice'; }, CHILD_ANCHOR);
         await expect(page.locator('#cascade-parent-name')).toHaveText('Alice');
     });
 
     test('mutating parent email updates child email', async ({ page }) => {
-        await page.evaluate((scope) => { window.Wire.get(scope).user.email = 'new@example.com'; }, PARENT_SCOPE);
-
+        await page.evaluate((sel) => { window.Wire.getScope(document.querySelector(sel)).get('user').email = 'new@example.com'; }, PARENT_ANCHOR);
         await expect(page.locator('#cascade-child-email')).toHaveText('new@example.com');
     });
 
     test('mutating child email updates parent email', async ({ page }) => {
-        await page.evaluate((scope) => { window.Wire.get(scope).user.email = 'other@example.com'; }, CHILD_SCOPE);
-
+        await page.evaluate((sel) => { window.Wire.getScope(document.querySelector(sel)).get('user').email = 'other@example.com'; }, CHILD_ANCHOR);
         await expect(page.locator('#cascade-parent-email')).toHaveText('other@example.com');
     });
 });
 
-// ---------------------------------------------------------------------------
-// Snapshot consistency
-// ---------------------------------------------------------------------------
-
 test.describe('snapshot consistency', () => {
     test('parent snapshot has correct initial data', async ({ page }) => {
-        const snap = await page.evaluate((scope) => window.Wire.snapshot(scope), PARENT_SCOPE);
-
+        const snap = await page.evaluate((sel) => window.Wire.getScope(document.querySelector(sel)).snapshot(), PARENT_ANCHOR);
         expect(snap.user.name).toBe('Jason');
         expect(snap.user.email).toBe('jason@example.com');
     });
 
     test('child snapshot has correct initial data', async ({ page }) => {
-        const snap = await page.evaluate((scope) => window.Wire.snapshot(scope), CHILD_SCOPE);
-
+        const snap = await page.evaluate((sel) => window.Wire.getScope(document.querySelector(sel)).snapshot(), CHILD_ANCHOR);
         expect(snap.user.name).toBe('Jason');
     });
 
     test('after mutating parent, child snapshot reflects change', async ({ page }) => {
-        await page.evaluate((scope) => { window.Wire.get(scope).user.name = 'Bob'; }, PARENT_SCOPE);
-
-        const snap = await page.evaluate((scope) => window.Wire.snapshot(scope), CHILD_SCOPE);
-
+        await page.evaluate((sel) => { window.Wire.getScope(document.querySelector(sel)).get('user').name = 'Bob'; }, PARENT_ANCHOR);
+        const snap = await page.evaluate((sel) => window.Wire.getScope(document.querySelector(sel)).snapshot(), CHILD_ANCHOR);
         expect(snap.user.name).toBe('Bob');
     });
 
     test('after mutating child, parent snapshot reflects change', async ({ page }) => {
-        await page.evaluate((scope) => { window.Wire.get(scope).user.name = 'Alice'; }, CHILD_SCOPE);
-
-        const snap = await page.evaluate((scope) => window.Wire.snapshot(scope), PARENT_SCOPE);
-
+        await page.evaluate((sel) => { window.Wire.getScope(document.querySelector(sel)).get('user').name = 'Alice'; }, CHILD_ANCHOR);
+        const snap = await page.evaluate((sel) => window.Wire.getScope(document.querySelector(sel)).snapshot(), PARENT_ANCHOR);
         expect(snap.user.name).toBe('Alice');
+    });
+
+    test('snapshot with variable name returns just that variable', async ({ page }) => {
+        const just = await page.evaluate((sel) => window.Wire.getScope(document.querySelector(sel)).snapshot('user'), PARENT_ANCHOR);
+        expect(just.name).toBe('Jason');
+        expect(just.email).toBe('jason@example.com');
     });
 });

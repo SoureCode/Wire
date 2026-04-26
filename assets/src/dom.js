@@ -1,10 +1,11 @@
-/** @import { Scope } from './types.js' */
+/** @import { ScopePending, ScopeDraft } from './types.js' */
 
 import { resolveRefs, buildRefMap, buildCrossScopeRefs } from './refs.js';
 import { unifyByIdentity } from './identity.js';
-import { makeProxy } from './proxy.js';
 import { applyBinding } from './bindings.js';
 import { resolvePath } from './path.js';
+import { Scope } from './scope.js';
+import { createScope, findScopeFor } from './scope.js';
 
 /**
  * @typedef {HTMLInputElement|HTMLTextAreaElement|HTMLSelectElement} FormControl
@@ -17,7 +18,6 @@ import { resolvePath } from './path.js';
  * @param {HTMLElement} element
  * @param {string} path
  * @param {Scope} scope
- * @returns {void}
  */
 function attachTwoWayListener(element, path, scope) {
     if (!(element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement)) {
@@ -34,21 +34,19 @@ function attachTwoWayListener(element, path, scope) {
 }
 
 /**
- * Walk the full document tree, discover wire scope comment markers and
- * `<script type="wire">` bootstrap tags, collect `data-wire` bindings, then
- * resolve refs and set up reactive proxies for every found scope.
- *
- * @param {Scope[]} scopes - mutable array; discovered scopes are pushed here
- * @returns {void}
+ * Walk the document, finalize every wire scope found via createScope(), and
+ * apply initial bindings.
  */
-export function parseScopes(scopes) {
+export function parseScopes() {
+    /** @type {ScopePending[]} */
+    const stack = [];
+    /** @type {ScopeDraft[]} */
+    const drafts = [];
+
     const walker = document.createTreeWalker(
         document,
         NodeFilter.SHOW_COMMENT | NodeFilter.SHOW_ELEMENT
     );
-
-    /** @type {Scope[]} */
-    const stack = [];
     let node;
 
     while ((node = walker.nextNode())) {
@@ -58,106 +56,75 @@ export function parseScopes(scopes) {
             if (text.startsWith('wire-scope:')) {
                 stack.push({
                     name: text.slice('wire-scope:'.length),
-                    data: null,
-                    bindings: [],
-                    refMap: {},
                     startComment: node,
                     endComment: null,
-                    proxy: null,
+                    data: null,
+                    bindings: [],
                 });
             } else if (text.startsWith('/wire-scope:') && stack.length) {
-                const scope = stack.pop();
-                scope.endComment = node;
+                const pending = stack.pop();
 
-                if (scope.data) {
-                    scopes.push(scope);
+                if (pending.data) {
+                    drafts.push({
+                        name: pending.name,
+                        startComment: pending.startComment,
+                        endComment: node,
+                        data: pending.data,
+                        bindings: pending.bindings,
+                        refMap: {},
+                    });
                 }
             }
         } else if (node instanceof HTMLElement && stack.length) {
-            const scope = stack[stack.length - 1];
+            const pending = stack[stack.length - 1];
 
             if (node instanceof HTMLScriptElement && node.type === 'wire') {
-                scope.data = JSON.parse(node.textContent);
+                pending.data = JSON.parse(node.textContent);
             }
 
             if (node.hasAttribute('data-wire')) {
                 const [path, target = 'text'] = node.getAttribute('data-wire').split(':');
-                scope.bindings.push({ element: node, path, target });
+                pending.bindings.push({ element: node, path, target });
             }
         }
     }
 
-    for (const scope of scopes) {
-        resolveRefs(scope.data, scopes);
+    for (const draft of drafts) {
+        resolveRefs(draft.data, drafts);
     }
 
-    unifyByIdentity(scopes);
+    unifyByIdentity(drafts);
 
-    for (const scope of scopes) {
-        scope.refMap = buildRefMap(scope.data);
+    for (const draft of drafts) {
+        draft.refMap = buildRefMap(draft.data);
     }
 
-    buildCrossScopeRefs(scopes);
+    buildCrossScopeRefs(drafts);
 
-    for (const scope of scopes) {
-        scope.proxy = makeProxy(scope.data, scope);
-        setupTwoWay(scope);
+    for (const draft of drafts) {
+        const scope = createScope(draft);
 
         for (const binding of scope.bindings) {
+            if (binding.target === 'value') {
+                attachTwoWayListener(binding.element, binding.path, scope);
+            }
             applyBinding(binding.element, binding.target, resolvePath(scope.data, binding.path));
         }
     }
 }
 
 /**
- * Attach `input` event listeners for all two-way (`value`) bindings in a scope.
- *
- * @param {Scope} scope
- * @returns {void}
- */
-export function setupTwoWay(scope) {
-    for (const binding of scope.bindings) {
-        if (binding.target === 'value') {
-            attachTwoWayListener(binding.element, binding.path, scope);
-        }
-    }
-}
-
-/**
- * Find the innermost scope that contains `element` by comparing document
- * positions against the scope's boundary comment nodes.
+ * Register a dynamically added element into the appropriate scope and wire
+ * up its two-way binding if needed.
  *
  * @param {HTMLElement} element
- * @param {Scope[]} scopes
- * @returns {Scope|null}
  */
-export function findScopeFor(element, scopes) {
-    for (const scope of scopes) {
-        const afterStart = scope.startComment.compareDocumentPosition(element) & Node.DOCUMENT_POSITION_FOLLOWING;
-        const beforeEnd = scope.endComment.compareDocumentPosition(element) & Node.DOCUMENT_POSITION_PRECEDING;
-
-        if (afterStart && beforeEnd) {
-            return scope;
-        }
-    }
-
-    return null;
-}
-
-/**
- * Register a dynamically added element into the appropriate scope and wire up
- * its two-way binding if needed.
- *
- * @param {HTMLElement} element
- * @param {Scope[]} scopes
- * @returns {void}
- */
-export function registerElement(element, scopes) {
+function registerElement(element) {
     if (!element.hasAttribute('data-wire')) {
         return;
     }
 
-    const scope = findScopeFor(element, scopes);
+    const scope = findScopeFor(element);
 
     if (!scope) {
         return;
@@ -179,20 +146,17 @@ export function registerElement(element, scopes) {
 /**
  * Observe the document for dynamically added elements and register any that
  * carry `data-wire` attributes.
- *
- * @param {Scope[]} scopes
- * @returns {void}
  */
-export function setupMutationObserver(scopes) {
+export function setupMutationObserver() {
     const observer = new MutationObserver((mutations) => {
         for (const mutation of mutations) {
             for (const node of mutation.addedNodes) {
                 if (node.nodeType === Node.ELEMENT_NODE) {
                     if (node.hasAttribute('data-wire')) {
-                        registerElement(node, scopes);
+                        registerElement(node);
                     }
 
-                    node.querySelectorAll('[data-wire]').forEach(element => registerElement(element, scopes));
+                    node.querySelectorAll('[data-wire]').forEach(element => registerElement(element));
                 }
             }
         }
