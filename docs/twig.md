@@ -24,36 +24,60 @@ Include the client bundle in your base template:
 ## Opt-in
 
 ```twig
-{% wire %}            {# this template gets a scope #}
-{% wire cascade %}    {# this template and all its includes/embeds get a scope #}
+{% wire %}                              {# this template gets a scope #}
+{% wire cascade %}                      {# scope cascades to includes/embeds #}
+{% wire groups=['admin'] %}             {# additionally serialize fields in named groups #}
+{% wire cascade groups=['admin'] %}     {# both #}
 ```
 
-Place `{% wire %}` anywhere in the template. It is a compile-time marker — placement does not affect output position. The scope comment and JSON bootstrap are injected at the start/end of the template's rendered output.
+`{% wire %}` is a compile-time marker — placement does not affect output position. The scope comment and JSON bootstrap are injected at the start/end of the template's rendered output.
 
 ## Bindings
 
+There is no binding attribute to write. **Every `{{ x.y.z }}` Twig print** is auto-detected at compile time:
+
 ```twig
-<span data-wire="user.name">{{ user.name }}</span>
-<input data-wire="user.email:value" value="{{ user.email }}">
-<span data-wire="user.status:class">{{ user.status }}</span>
-<div data-wire="item.id:data-id">...</div>
+<h1>{{ user.name }}</h1>                          {# text content — reactive #}
+<input value="{{ user.email }}">                  {# attribute — reactive, two-way for form controls #}
+<a class="card-{{ user.status }}">…</a>           {# implicit literal+path concat — reactive #}
+<span>Hello, {{ user.name }}!</span>              {# surrounding literals preserved verbatim #}
+<a href="/user/{{ user.id }}/{{ user.slug }}">…</a>  {# multiple prints in one attribute — reactive #}
 ```
 
-Format: `data-wire="dot.path"` or `data-wire="dot.path:target"`.
+Two-way binding turns on automatically for `value="{{ x.y }}"` on form controls (`<input>`, `<textarea>`, `<select>`).
 
-| Target | Behaviour |
-|--------|-----------|
-| *(omitted)* | Sets `element.textContent` |
-| `value` | Sets `element.value`; also enables two-way binding on form controls |
-| `innerHTML` | Sets `element.innerHTML` — use only with trusted data |
-| `hidden`, `disabled`, `readonly`, `required`, `checked`, … | Boolean attribute — sets (truthy value) or removes (falsy value) the attribute |
-| *(anything else)* | Sets the named HTML attribute via `setAttribute` |
+### Filters
 
-Multiple elements can bind to the same path — all update when the value changes.
+Filters from a small whitelist are replayed on the client when the underlying value changes:
+
+```twig
+<span>{{ user.name|upper|trim }}</span>
+<span>{{ user.tags|length }}</span>
+<a class="{{ user.status|default('inactive') }}">…</a>
+```
+
+Currently replayable: `upper`, `lower`, `trim`, `capitalize`, `length`, `abs`, `default`, `nl2br`, `escape`/`e` (no-op — text bindings auto-escape), `raw` (switches text to `innerHTML`).
+
+### Frozen expressions
+
+Anything Wire's compile-time extractor doesn't recognise is **frozen**: rendered once at server side, not updated client-side on path changes. The path itself is still tracked and serialized so the data is available to other bindings or `Wire.submit()`.
+
+```twig
+{{ user.name|reverse }}                 {# unsupported filter — frozen #}
+{{ a.x ? a.y : a.z }}                  {# ternary — frozen #}
+{{ format(user) }}                      {# function call — frozen #}
+<a class="x-{{ user.id|reverse }}">…    {# attr with frozen filter — whole attr is frozen #}
+```
+
+Forms of expression that ARE replayable: a name, a name with dot-chain accessors, those wrapped in whitelisted filters, and `~`-concatenation of literals plus those.
+
+### Multiple elements, same path
+
+Multiple prints of the same path produce independent markers. Mutating the path updates every binding.
 
 ## Entity Identity & Submit
 
-Doctrine-managed entities are tagged with their class FQCN and identifier so the client can de-duplicate them and post them back:
+Doctrine-managed entities are tagged with class FQCN and identifier so the client can de-duplicate them and post them back:
 
 ```php
 use SoureCode\Wire\Attribute\Wire;
@@ -73,10 +97,10 @@ class User
 }
 ```
 
-- `#[Wire(submit: 'route_name')]` declares the round-trip target. The route's first declared HTTP method becomes the request method (`POST` if the route accepts any). Identifier values are passed as route parameters, so `{id}` placeholders resolve naturally.
-- `#[Groups(['wire'])]` decides which fields are exposed. Properties without the group are skipped. `#[Ignore]` works as well.
+- `#[Wire(submit: 'route_name')]` declares the round-trip target. The route's first declared HTTP method becomes the request method (`POST` if the route accepts any). Identifier values are passed as route params, so `/user/{id}/save` placeholders resolve naturally.
+- `#[Groups(['wire'])]` is **only** consulted for fields the template did NOT bind. Properties Twig already prints are exposed regardless of `#[Groups]` / `#[Ignore]`.
 
-The emitted JSON for an entity carries identity metadata alongside the fields:
+What the runtime emits per scope:
 
 ```json
 {
@@ -90,17 +114,7 @@ The emitted JSON for an entity carries identity metadata alongside the fields:
 }
 ```
 
-In production (`APP_DEBUG=0`) `__class` is replaced with an 8-character sha256 prefix to avoid leaking class names.
-
-Plain arrays, DTOs and other non-entity values pass through unchanged — no identity tag, no `Wire.submit()` support.
-
-## How It Works
-
-**Compile time** — `WireNodeVisitor` scans `data-wire` values in raw HTML via regex on `TextNode` nodes and collects the *root* variable names referenced (`user`, `cart`, …). For opted-in templates it injects `WireScopeStartNode` / `WireScopeEndNode` into Twig's `display_start` / `display_end` hooks.
-
-**Render time** — `WireRuntime` (a Twig runtime) takes the bound roots, hands each value to the Symfony Serializer, and emits the JSON bootstrap. The chain includes `WireIdentityNormalizer`, which prepends `__class` / `__id` / `__submit` to every Doctrine-managed object it sees. Top-level cross-scope dedup uses `spl_object_id()`: the same instance referenced as a root in two scopes during one render becomes `{"$ref": "scope#path"}` in the second occurrence. Nested same-entity dedup happens client-side via `__class`+`__id` identity.
-
-**Scope IDs** — In debug mode (`APP_DEBUG=1`) the scope ID equals the template name. In production (`APP_DEBUG=0`) it is an 8-character sha256 prefix of the template name.
+In production (`APP_DEBUG=0`) both the scope ID and `__class` are 8-character sha256 prefixes to avoid leaking template paths and class names.
 
 ## Cascade
 
@@ -113,23 +127,40 @@ Plain arrays, DTOs and other non-entity values pass through unchanged — no ide
 ```
 
 - **Includes** — resolved at compile time; cascade propagates immediately.
-- **Embeds** — compiled lazily and separately. The embedded template filename is read from `embedded_templates[n]->getNode('parent')` and stored in a static property that the child's compilation picks up.
+- **Embeds** — compiled lazily and separately; embedded template filenames are tracked in a static property that the child's compilation picks up.
 
 Cascade requires parent and embedded/included template to compile in the same request when the cache is cold.
+
+## How It Works
+
+**Compile time** — `WireNodeVisitor` walks the AST in document order. For each `{{ … }}` print it tries to classify the expression via `WireBindingExtractor`:
+
+| Expression | Result |
+|------------|--------|
+| `user.name` | `{ "p": "user.name" }` |
+| `user.name\|upper\|trim` | `{ "p": "user.name", "f": [["upper"], ["trim"]] }` |
+| `user.name ~ ' (' ~ user.role ~ ')'` | `{ "parts": [{"p":"user.name"},{"l":" ("},{"p":"user.role"},{"l":")"}] }` |
+| Anything else (path still extracted as a tracking-only path) | `null` (frozen) |
+
+A small HTML state machine (`WireHtmlScanner` / `WireAttrInjector`) decides whether each print is in **text** or **attribute** context:
+
+- **Text** prints get wrapped in `<!--w:JSON-->...<!--/w-->` comment markers around the rendered value. Surrounding literal text is left alone.
+- **Attribute** prints — for any tag attribute that contains one or more prints — get a sibling `wire:<attr>='JSON'` injected after the closing quote.
+
+Frozen prints emit no marker; they render normally.
+
+**Render time** — `WireRuntime` (a Twig runtime) walks every dot-path the visitor collected, fetches the value via `PropertyAccessor`, and emits the scope JSON. Doctrine-managed objects are tagged with `__class`/`__id`/`__submit` via `WireIdentityResolver`. Cross-scope `$ref` dedup uses `spl_object_id()` for top-level roots; nested same-entity dedup happens client-side from the identity tags.
+
+`{% wire groups=[…] %}` adds an additive Symfony Serializer pass per top-level entity root to fill in fields not already present from the path-walk.
 
 ## API Reference
 
 ```php
-WireHelper::scopeId(string $templateName, bool $debug): string
-```
-Returns the scope identifier. Debug mode: `$templateName`. Production: `substr(hash('sha256', $templateName), 0, 8)`.
-
-```php
-WireHelper::reset(): void
-```
-Resets cascade-tracking state held in `WireNodeVisitor`. Used internally by tests; not normally needed at runtime.
-
-```php
 SoureCode\Wire\Attribute\Wire(?string $submit = null)
 ```
-Class-level attribute. `submit` is a Symfony route name; the bundle resolves the route to a URL and reads its declared methods at render time.
+Class-level attribute. `submit` is a Symfony route name; the bundle resolves it to a URL and reads its declared methods at render time. Route placeholders receive the entity's identifier values.
+
+```php
+WireHelper::scopeId(string $templateName, bool $debug): string
+```
+Returns the scope identifier. Debug: `$templateName`. Production: `substr(hash('sha256', $templateName), 0, 8)`.
