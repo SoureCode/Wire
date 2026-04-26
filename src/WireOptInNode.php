@@ -1,6 +1,6 @@
 <?php
 
-namespace Wire;
+namespace SoureCode\Wire;
 
 use Twig\Compiler;
 use Twig\Node\Node;

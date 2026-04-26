@@ -1,14 +1,28 @@
 {
-    "name": "wire/wire",
+    "name": "sourecode/wire",
     "description": "Reactive data binding for server-rendered HTML",
-    "type": "library",
+    "type": "symfony-bundle",
     "require": {
+        "php": ">=8.1",
+        "symfony/http-kernel": "^7.0 || ^8.0",
         "twig/twig": "^3.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^11.0"
     },
     "autoload": {
         "psr-4": {
-            "Wire\\": "src/"
+            "SoureCode\\Wire\\": "src/",
+            "SoureCode\\Bundle\\Wire\\": "src/Bundle/"
         }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "SoureCode\\Wire\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "phpunit"
     },
     "minimum-stability": "stable"
 }

@@ -1,6 +1,6 @@
 <?php
 
-namespace Wire;
+namespace SoureCode\Wire;
 
 use Twig\Compiler;
 use Twig\Node\Node;
@@ -19,7 +19,7 @@ class WireScopeStartNode extends Node
         $var = $this->getAttribute('var');
 
         $compiler
-            ->write("\${$var} = \\Wire\\WireHelper::extract(\$context, " . var_export($paths, true) . ", " . var_export($this->getAttribute('template'), true) . ");\n")
+            ->write("\${$var} = \\SoureCode\\Wire\\WireHelper::extract(\$context, " . var_export($paths, true) . ", " . var_export($this->getAttribute('template'), true) . ");\n")
             ->write("if (!empty(\${$var})) {\n")
             ->write("    echo '<!-- wire-scope:" . $template . " -->';\n")
             ->write("    echo '<script type=\"wire\">' . json_encode(\${$var}) . '</script>';\n")

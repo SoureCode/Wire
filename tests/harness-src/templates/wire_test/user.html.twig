@@ -1,0 +1,11 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Wire Test — User{% endblock %}
+
+{% block body %}
+{% wire %}
+<h1 data-wire="user.name">{{ user.name }}</h1>
+<p data-wire="user.email">{{ user.email }}</p>
+<input data-wire="user.name:value" value="{{ user.name }}">
+<span data-wire="user.status:class">{{ user.status }}</span>
+{% endblock %}

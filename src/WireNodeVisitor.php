@@ -1,6 +1,6 @@
 <?php
 
-namespace Wire;
+namespace SoureCode\Wire;
 
 use Twig\Environment;
 use Twig\Node\EmbedNode;

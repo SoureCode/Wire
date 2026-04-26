@@ -1,0 +1,10 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Wire Test — User Relations{% endblock %}
+
+{% block body %}
+{% wire %}
+<span data-wire="user.name">{{ user.name }}</span>
+<span data-wire="user.address.city">{{ user.address ? user.address.city : '' }}</span>
+<span data-wire="user.address.street">{{ user.address ? user.address.street : '' }}</span>
+{% endblock %}

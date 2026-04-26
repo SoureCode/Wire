@@ -1,10 +1,10 @@
 <?php
 
-require_once __DIR__ . '/vendor/autoload.php';
+require_once __DIR__ . '/../vendor/autoload.php';
 
 $loader = new \Twig\Loader\FilesystemLoader(__DIR__ . '/templates');
 $twig = new \Twig\Environment($loader, ['debug' => true]);
-$twig->addExtension(new \Wire\WireExtension());
+$twig->addExtension(new \SoureCode\Wire\WireExtension());
 
 $person = new stdClass();
 $person->name = 'Jason';
@@ -30,7 +30,7 @@ $cart = [
     ],
 ];
 
-\Wire\WireHelper::reset();
+\SoureCode\Wire\WireHelper::reset();
 echo $twig->render('poc.html.twig', [
     'user'    => $person,
     'address' => $address,
