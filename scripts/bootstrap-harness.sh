@@ -40,6 +40,9 @@ sed -i '/dbname_suffix/d' "$HARNESS/config/packages/doctrine.yaml"
 echo "==> Patching .env.test..."
 echo 'DATABASE_URL="sqlite:///:memory:"' >> "$HARNESS/.env.test"
 
+echo "==> Patching base template to include Wire bundle..."
+sed -i 's|</body>|    <script src="/wire.js"></script>\n    </body>|' "$HARNESS/templates/base.html.twig"
+
 echo "==> Copying application files..."
 cp -r "$SRC/src/"*       "$HARNESS/src/"
 cp -r "$SRC/templates/"* "$HARNESS/templates/"

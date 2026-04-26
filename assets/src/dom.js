@@ -2,6 +2,8 @@
 
 import { resolveRefs, buildRefMap, buildCrossScopeRefs } from './refs.js';
 import { makeProxy } from './proxy.js';
+import { applyBinding } from './bindings.js';
+import { resolvePath } from './path.js';
 
 /**
  * @typedef {HTMLInputElement|HTMLTextAreaElement|HTMLSelectElement} FormControl
@@ -94,6 +96,10 @@ export function parseScopes(scopes) {
     for (const scope of scopes) {
         scope.proxy = makeProxy(scope.data, scope);
         setupTwoWay(scope);
+
+        for (const binding of scope.bindings) {
+            applyBinding(binding.element, binding.target, resolvePath(scope.data, binding.path));
+        }
     }
 }
 

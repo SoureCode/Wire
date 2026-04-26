@@ -4,3 +4,4 @@ dist/
 .phpunit.cache/
 .phpunit.result.cache
 tests/harness/
+test-results/
