@@ -1,4 +1,4 @@
-/** @import { ScopeBindings } from './types.js' */
+/** @import { Binding, ScopeBindings } from './types.js' */
 
 import { resolvePath } from './path.js';
 import { applyFilters } from './filters.js';
@@ -11,11 +11,6 @@ const BOOLEAN_ATTRS = new Set([
 
 /**
  * Evaluate a marker binding descriptor against the live scope data.
- * Descriptor shapes:
- *
- *   { p: 'user.name' }
- *   { p: 'user.name', f: [['upper'], ['trim']] }
- *   { parts: [{ l: 'prefix-' }, { p: 'user.id' }, { l: '-suffix' }] }
  *
  * @param {object} descriptor
  * @param {unknown} data
@@ -32,53 +27,102 @@ export function evaluateBinding(descriptor, data) {
 }
 
 /**
- * Apply a resolved value to a DOM element according to the binding target.
+ * Read the `raw` flag from a descriptor's filter chain.
  *
- * @param {HTMLElement} element
- * @param {string} target - "text", "value", "innerHTML", a boolean attr name, or any HTML attribute
- * @param {unknown} value
- * @returns {void}
+ * @param {object} descriptor
+ * @returns {boolean}
  */
-export function applyBinding(element, target, value) {
-    if (target === 'text') {
-        element.textContent = value ?? '';
-    } else if (target === 'value') {
-        element.value = value ?? '';
-    } else if (target === 'innerHTML') {
-        element.innerHTML = value ?? '';
-    } else if (BOOLEAN_ATTRS.has(target)) {
-        if (value) {
-            element.setAttribute(target, '');
-        } else {
-            element.removeAttribute(target);
-        }
-    } else {
-        element.setAttribute(target, value ?? '');
-    }
+function isRaw(descriptor) {
+    return Array.isArray(descriptor.f) && descriptor.f.some(([n]) => n === 'raw');
 }
 
 /**
- * Re-apply all bindings in `scope` whose path starts with `changedPath`.
+ * Compute the binding's value and apply it to the DOM target.
+ *
+ * @param {Binding} binding
+ * @param {Record<string, unknown>} data
+ * @returns {void}
+ */
+export function applyBinding(binding, data) {
+    const value = evaluateBinding(binding.descriptor, data);
+
+    if (binding.kind === 'text') {
+        if (isRaw(binding.descriptor)) {
+            // Raw bindings write through innerHTML on the placeholder's
+            // parent. Other siblings between the marker pair are wiped
+            // intentionally — Wire owns the content between markers.
+            const parent = binding.node.parentNode;
+            if (!parent) return;
+            binding.node.nodeValue = '';
+            // Replace the placeholder text node's content via innerHTML on
+            // a wrapper-like approach: write into the placeholder by way
+            // of a temporary fragment.
+            const fragment = document.createRange().createContextualFragment(String(value ?? ''));
+            parent.insertBefore(fragment, binding.node);
+            // Remove the now-empty placeholder; on next update we rebind to
+            // a fresh text node, but for now just leave it.
+            return;
+        }
+        binding.node.nodeValue = value == null ? '' : String(value);
+        return;
+    }
+
+    // kind === 'attr'
+    applyAttribute(binding.node, binding.attr, value);
+}
+
+/**
+ * Apply a value to a single attribute target on an element.
+ *
+ * @param {Element} element
+ * @param {string} attr
+ * @param {unknown} value
+ */
+function applyAttribute(element, attr, value) {
+    if (attr === 'value' && (
+        element instanceof HTMLInputElement
+        || element instanceof HTMLTextAreaElement
+        || element instanceof HTMLSelectElement
+    )) {
+        element.value = value == null ? '' : String(value);
+        return;
+    }
+
+    if (attr === 'innerHTML') {
+        element.innerHTML = value == null ? '' : String(value);
+        return;
+    }
+
+    if (BOOLEAN_ATTRS.has(attr)) {
+        if (value) element.setAttribute(attr, '');
+        else element.removeAttribute(attr);
+        return;
+    }
+
+    element.setAttribute(attr, value == null ? '' : String(value));
+}
+
+/**
+ * Re-apply every binding in `scope` whose descriptor reads from a path
+ * affected by `changedPath` (exact match or prefix-of).
  *
  * @param {ScopeBindings} scope
  * @param {string} changedPath
- * @returns {void}
  */
 export function updateScopeBindings(scope, changedPath) {
     for (const binding of scope.bindings) {
-        if (binding.path === changedPath || binding.path.startsWith(changedPath + '.')) {
-            applyBinding(binding.element, binding.target, resolvePath(scope.data, binding.path));
+        if (binding.paths.some(p => p === changedPath || p.startsWith(changedPath + '.') || changedPath.startsWith(p + '.'))) {
+            applyBinding(binding, scope.data);
         }
     }
 }
 
 /**
- * Update bindings in the changed scope and propagate to aliased paths in other
- * scopes via the scope's refMap.
+ * Update bindings in the changed scope and propagate to aliased paths in
+ * other scopes via the scope's refMap.
  *
  * @param {ScopeBindings} scope
  * @param {string} changedPath
- * @returns {void}
  */
 export function updateBindings(scope, changedPath) {
     updateScopeBindings(scope, changedPath);

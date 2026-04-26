@@ -1,8 +1,17 @@
 /**
+ * One reactive binding discovered by the marker walker.
+ *
+ * - `kind: 'text'` — `node` is a Text node sitting between a `<!--w:…-->`
+ *   pair; updates write `node.nodeValue`.
+ * - `kind: 'attr'` — `node` is the Element carrying a `wire:<attr>` marker;
+ *   updates apply via setAttribute / .value / boolean-attr presence.
+ *
  * @typedef {Object} Binding
- * @property {HTMLElement} element
- * @property {string} path - dot-separated data path, e.g. "user.address.city"
- * @property {string} target - "text" | "value" | any attribute name
+ * @property {'text'|'attr'} kind
+ * @property {Text|Element} node
+ * @property {string} [attr] - attribute name when kind is 'attr'
+ * @property {object} descriptor - the JSON marker payload ({p,f?} or {parts:[...]})
+ * @property {string[]} paths - dot-paths the descriptor reads from
  */
 
 /**
