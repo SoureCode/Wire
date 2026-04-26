@@ -5,14 +5,15 @@ import { Scope } from './scope.js';
 
 /**
  * Wrap `data` in a recursive Proxy that triggers DOM binding updates on every
- * property assignment. Every proxied object additionally exposes three
- * methods:
+ * property assignment.
  *
- * - `getSnapshot()`  — fresh deep clone of this object with identity tags stripped
- * - `isEntity()`     — true iff this object carries `__class` + `__id`
- * - `getClass()`     — the entity class token (`__class`), or undefined
- * - `getId()`        — the entity identifier (`__id`), or undefined
- * - `getScope()`     — the ScopeHandle of the containing scope
+ * Reserved `$`-prefixed methods exposed on every proxy:
+ *
+ * - `$getClass()`    — entity class token (`__class`), or undefined
+ * - `$getId()`       — entity identifier (`__id`), or undefined
+ * - `$getSnapshot()` — fresh deep clone of this object with identity tags stripped
+ *
+ * The `$` prefix is reserved; entity field names beginning with `$` are not supported.
  *
  * @param {Record<string, unknown>} data
  * @param {Scope} scope
@@ -22,24 +23,16 @@ import { Scope } from './scope.js';
 export function makeProxy(data, scope, path = '') {
     return new Proxy(data, {
         get(target, key) {
-            if (key === 'getSnapshot') {
+            if (key === '$getSnapshot') {
                 return () => stripIdentityTags(deepClone(target));
             }
 
-            if (key === 'isEntity') {
-                return () => '__class' in target && '__id' in target;
-            }
-
-            if (key === 'getClass' && '__class' in target) {
+            if (key === '$getClass') {
                 return () => target['__class'];
             }
 
-            if (key === 'getId' && '__id' in target) {
+            if (key === '$getId') {
                 return () => target['__id'];
-            }
-
-            if (key === 'getScope') {
-                return () => scope.handle;
             }
 
             const value = target[key];

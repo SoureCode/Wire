@@ -45,6 +45,43 @@ describe('makeProxy', () => {
         expect(data.user.name).toBe('Other');
     });
 
+    it('$getClass returns the __class identity tag', () => {
+        const data = { __class: 'App\\Entity\\User', __id: 42, name: 'Alice' };
+        const proxy = makeProxy(data, makeScope(data));
+
+        expect(proxy.$getClass()).toBe('App\\Entity\\User');
+    });
+
+    it('$getClass returns undefined for non-entity proxies', () => {
+        const data = { name: 'Alice' };
+        const proxy = makeProxy(data, makeScope(data));
+
+        expect(proxy.$getClass()).toBeUndefined();
+    });
+
+    it('$getId returns the __id identity tag', () => {
+        const data = { __class: 'App\\Entity\\User', __id: 42, name: 'Alice' };
+        const proxy = makeProxy(data, makeScope(data));
+
+        expect(proxy.$getId()).toBe(42);
+    });
+
+    it('$getId returns undefined for non-entity proxies', () => {
+        const data = { name: 'Alice' };
+        const proxy = makeProxy(data, makeScope(data));
+
+        expect(proxy.$getId()).toBeUndefined();
+    });
+
+    it('$getSnapshot returns a clone without identity tags', () => {
+        const data = { __class: 'X', __id: 1, name: 'Alice', nested: { __class: 'Y', __id: 2, k: 'v' } };
+        const proxy = makeProxy(data, makeScope(data));
+
+        const snap = proxy.$getSnapshot();
+        expect(snap).toEqual({ name: 'Alice', nested: { k: 'v' } });
+        expect(snap).not.toBe(data);
+    });
+
     it('triggers DOM updates when a property is set', () => {
         const node = document.createTextNode('');
         const data = { name: 'Jason' };
