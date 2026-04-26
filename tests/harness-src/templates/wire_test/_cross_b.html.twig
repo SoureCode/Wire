@@ -1,6 +1,6 @@
 {% wire %}
 <div id="scope-b">
-    <span id="cross-b-name" data-wire="user.name">{{ user.name }}</span>
-    <span id="cross-b-email" data-wire="user.email">{{ user.email }}</span>
-    <input id="cross-b-input" type="text" data-wire="user.name:value" value="{{ user.name }}">
+    <span id="cross-b-name">{{ user.name }}</span>
+    <span id="cross-b-email">{{ user.email }}</span>
+    <input id="cross-b-input" type="text" value="{{ user.name }}">
 </div>

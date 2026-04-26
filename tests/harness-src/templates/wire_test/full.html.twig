@@ -2,11 +2,11 @@
 {% block title %}Wire Full Test{% endblock %}
 {% block body %}
 {% wire %}
-<h1 id="name-heading" data-wire="user.name">{{ user.name }}</h1>
-<span id="name-copy" data-wire="user.name">{{ user.name }}</span>
-<span id="name-title" data-wire="user.name:title" title="{{ user.name }}">-</span>
-<p id="email-text" data-wire="user.email">{{ user.email }}</p>
-<span id="status-class" data-wire="user.status:class">{{ user.status }}</span>
-<input id="name-input" type="text" data-wire="user.name:value" value="{{ user.name }}">
-<input id="email-input" type="text" data-wire="user.email:value" value="{{ user.email }}">
+<h1 id="name-heading">{{ user.name }}</h1>
+<span id="name-copy">{{ user.name }}</span>
+<span id="name-title" title="{{ user.name }}">-</span>
+<p id="email-text">{{ user.email }}</p>
+<span id="status-class" class="{{ user.status }}">{{ user.status }}</span>
+<input id="name-input" type="text" value="{{ user.name }}">
+<input id="email-input" type="text" value="{{ user.email }}">
 {% endblock %}

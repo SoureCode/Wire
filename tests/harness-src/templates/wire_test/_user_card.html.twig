@@ -1,6 +1,6 @@
 {% wire %}
 <div class="user-card">
-    <span class="card-name" data-wire="user.name">{{ user.name }}</span>
-    <span class="card-email" data-wire="user.email">{{ user.email }}</span>
-    <span class="card-status" data-wire="user.status:class">{{ user.status }}</span>
+    <span class="card-name">{{ user.name }}</span>
+    <span class="card-email">{{ user.email }}</span>
+    <span class="card-status {{ user.status }}">{{ user.status }}</span>
 </div>

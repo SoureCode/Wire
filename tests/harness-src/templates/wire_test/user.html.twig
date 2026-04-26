@@ -4,8 +4,8 @@
 
 {% block body %}
 {% wire %}
-<h1 data-wire="user.name">{{ user.name }}</h1>
-<p data-wire="user.email">{{ user.email }}</p>
-<input data-wire="user.name:value" value="{{ user.name }}">
-<span data-wire="user.status:class">{{ user.status }}</span>
+<h1>{{ user.name }}</h1>
+<p>{{ user.email }}</p>
+<input value="{{ user.name }}">
+<span class="{{ user.status }}">{{ user.status }}</span>
 {% endblock %}
