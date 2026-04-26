@@ -26,6 +26,12 @@ class WireTestController extends AbstractController
         return $this->render('wire_test/user.html.twig', ['user' => $user]);
     }
 
+    #[Route('/user/{id}/save', name: 'wire_test_user_save', methods: ['PUT'])]
+    public function userSave(int $id): Response
+    {
+        return new Response('', Response::HTTP_NO_CONTENT);
+    }
+
     #[Route('/full/{id}', name: 'wire_test_full')]
     public function full(int $id, EntityManagerInterface $em): Response
     {

@@ -5,10 +5,12 @@ namespace App\Entity;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use SoureCode\Wire\Attribute\Wire;
 use Symfony\Component\Serializer\Attribute\Groups;
 
 #[ORM\Entity]
 #[ORM\Table(name: '`user`')]
+#[Wire(submit: 'wire_test_user_save')]
 class User
 {
     #[ORM\Id]

@@ -5,6 +5,7 @@ namespace SoureCode\Wire\Serializer;
 use Doctrine\Persistence\ManagerRegistry;
 use SoureCode\Wire\Attribute\Wire;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Symfony\Component\Routing\RouterInterface;
 use Symfony\Component\Serializer\Normalizer\NormalizerAwareInterface;
 use Symfony\Component\Serializer\Normalizer\NormalizerAwareTrait;
 use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
@@ -22,7 +23,7 @@ class WireIdentityNormalizer implements NormalizerInterface, NormalizerAwareInte
 
     public function __construct(
         private readonly ManagerRegistry $registry,
-        private readonly UrlGeneratorInterface $router,
+        private readonly RouterInterface $router,
         private readonly bool $debug,
     ) {
     }
@@ -64,7 +65,7 @@ class WireIdentityNormalizer implements NormalizerInterface, NormalizerAwareInte
     }
 
     /**
-     * @return array{__class: string, __id: mixed, __submit?: string}|null
+     * @return array{__class: string, __id: mixed, __submit?: array{url: string, method: string}}|null
      */
     private function identity(object $value): ?array
     {
@@ -89,7 +90,7 @@ class WireIdentityNormalizer implements NormalizerInterface, NormalizerAwareInte
             '__id'    => $id,
         ];
 
-        $submit = $this->resolveSubmit($class);
+        $submit = $this->resolveSubmit($class, $idValues);
         if ($submit !== null) {
             $tag['__submit'] = $submit;
         }
@@ -97,7 +98,11 @@ class WireIdentityNormalizer implements NormalizerInterface, NormalizerAwareInte
         return $tag;
     }
 
-    private function resolveSubmit(string $class): ?string
+    /**
+     * @param array<string, mixed> $idValues
+     * @return array{url: string, method: string}|null
+     */
+    private function resolveSubmit(string $class, array $idValues): ?array
     {
         $reflection = new \ReflectionClass($class);
         $attrs = $reflection->getAttributes(Wire::class);
@@ -112,6 +117,17 @@ class WireIdentityNormalizer implements NormalizerInterface, NormalizerAwareInte
             return null;
         }
 
-        return $this->router->generate($wire->submit, [], UrlGeneratorInterface::ABSOLUTE_PATH);
+        $route = $this->router->getRouteCollection()->get($wire->submit);
+
+        if ($route === null) {
+            throw new \RuntimeException(sprintf('Wire route "%s" referenced by %s does not exist.', $wire->submit, $class));
+        }
+
+        $methods = $route->getMethods();
+
+        return [
+            'url'    => $this->router->generate($wire->submit, $idValues, UrlGeneratorInterface::ABSOLUTE_PATH),
+            'method' => $methods === [] ? 'POST' : $methods[0],
+        ];
     }
 }

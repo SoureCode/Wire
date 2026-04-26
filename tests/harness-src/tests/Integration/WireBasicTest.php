@@ -42,6 +42,18 @@ class WireBasicTest extends WireIntegrationTestCase
         $this->assertSame($user->id, $data['user']['__id']);
     }
 
+    public function testEntityCarriesSubmitUrlAndMethodFromRoute(): void
+    {
+        $user = new User('Jason', 'jason@example.com');
+        $this->em->persist($user);
+        $this->em->flush();
+
+        $data = $this->wireData('wire_test/user.html.twig', ['user' => $user]);
+        $this->assertArrayHasKey('__submit', $data['user']);
+        $this->assertSame('PUT', $data['user']['__submit']['method']);
+        $this->assertStringEndsWith('/wire-test/user/' . $user->id . '/save', $data['user']['__submit']['url']);
+    }
+
     public function testSameEntityInTwoScopesProducesRef(): void
     {
         $user = new User('Shared', 'shared@example.com');

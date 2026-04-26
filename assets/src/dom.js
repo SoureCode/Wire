@@ -1,6 +1,7 @@
 /** @import { Scope } from './types.js' */
 
 import { resolveRefs, buildRefMap, buildCrossScopeRefs } from './refs.js';
+import { unifyByIdentity } from './identity.js';
 import { makeProxy } from './proxy.js';
 import { applyBinding } from './bindings.js';
 import { resolvePath } from './path.js';
@@ -88,6 +89,11 @@ export function parseScopes(scopes) {
 
     for (const scope of scopes) {
         resolveRefs(scope.data, scopes);
+    }
+
+    unifyByIdentity(scopes);
+
+    for (const scope of scopes) {
         scope.refMap = buildRefMap(scope.data);
     }
 

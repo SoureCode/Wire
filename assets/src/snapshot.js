@@ -1,11 +1,12 @@
 /** @import { ScopeSnapshot } from './types.js' */
 
 import { deepClone } from './utils/deepClone.js';
+import { stripIdentityTags } from './identity.js';
 
 /**
- * Return a deep-cloned snapshot of one or all scope data trees.
- * The clone is decoupled from the live proxy — mutations to the snapshot do
- * not affect the reactive state.
+ * Return a deep-cloned snapshot of one or all scope data trees, with all
+ * `__class` / `__id` / `__submit` identity tags stripped — the result is the
+ * pure user-visible data shape, suitable for posting back to the server.
  *
  * @param {ScopeSnapshot[]} scopes
  * @param {string} [name] - scope name; omit to snapshot all scopes
@@ -13,7 +14,7 @@ import { deepClone } from './utils/deepClone.js';
  */
 export function snapshot(scopes, name) {
     if (name === undefined) {
-        return scopes.map(scope => ({ scope: scope.name, data: deepClone(scope.data) }));
+        return scopes.map(scope => ({ scope: scope.name, data: stripIdentityTags(deepClone(scope.data)) }));
     }
 
     const found = scopes.find(scope => scope.name === name);
@@ -22,5 +23,5 @@ export function snapshot(scopes, name) {
         return null;
     }
 
-    return deepClone(found.data);
+    return stripIdentityTags(deepClone(found.data));
 }
