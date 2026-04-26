@@ -6,6 +6,7 @@ use Doctrine\Persistence\ManagerRegistry;
 use PHPUnit\Framework\TestCase;
 use SoureCode\Wire\WireIdentityResolver;
 use SoureCode\Wire\WireRuntime;
+use Symfony\Component\PropertyAccess\PropertyAccess;
 use Symfony\Component\Routing\RouterInterface;
 use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
 use Symfony\Component\Serializer\Serializer;
@@ -17,6 +18,7 @@ class WireRuntimeTest extends TestCase
         $resolver = new WireIdentityResolver(
             $this->createStub(ManagerRegistry::class),
             $this->createStub(RouterInterface::class),
+            PropertyAccess::createPropertyAccessor(),
             true,
         );
         return new WireRuntime($resolver, new Serializer([new ObjectNormalizer()]));

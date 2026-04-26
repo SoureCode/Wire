@@ -8,6 +8,7 @@ use SoureCode\Wire\WireExtension;
 use SoureCode\Wire\WireIdentityResolver;
 use SoureCode\Wire\WireNodeVisitor;
 use SoureCode\Wire\WireRuntime;
+use Symfony\Component\PropertyAccess\PropertyAccess;
 use Symfony\Component\Routing\RouterInterface;
 use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
 use Symfony\Component\Serializer\Serializer;
@@ -31,6 +32,7 @@ class WireIntegrationTest extends TestCase
         $resolver = new WireIdentityResolver(
             $this->createStub(ManagerRegistry::class),
             $this->createStub(RouterInterface::class),
+            PropertyAccess::createPropertyAccessor(),
             $debug,
         );
         $runtime = new WireRuntime($resolver, new Serializer([new ObjectNormalizer()]));
