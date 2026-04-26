@@ -5,13 +5,12 @@ namespace SoureCode\Wire;
 use Twig\Environment;
 use Twig\Node\EmbedNode;
 use Twig\Node\Expression\ConstantExpression;
-use Twig\Node\Expression\GetAttrExpression;
-use Twig\Node\Expression\NameExpression;
 use Twig\Node\IncludeNode;
 use Twig\Node\ModuleNode;
 use Twig\Node\Node;
 use Twig\Node\Nodes;
 use Twig\Node\PrintNode;
+use Twig\Node\TextNode;
 use Twig\NodeVisitor\NodeVisitorInterface;
 
 class WireNodeVisitor implements NodeVisitorInterface
@@ -74,6 +73,8 @@ class WireNodeVisitor implements NodeVisitorInterface
                 || !empty(self::$globalCascadeChildren[$templateName]);
 
             if (!empty($paths) && $optedIn) {
+                $this->wrapTextContentPrints($node);
+
                 $node->setNode('display_start', new Nodes([
                     new WireScopeStartNode($templateName, $paths, $node->getTemplateLine()),
                     $node->getNode('display_start'),
@@ -101,6 +102,57 @@ class WireNodeVisitor implements NodeVisitorInterface
     }
 
     /**
+     * Walk the AST in document order and replace every text-content PrintNode
+     * with a Nodes wrapper that emits comment markers around the original
+     * print. Attribute-context prints are left untouched (handled later).
+     *
+     * @return string[]
+     */
+    private function wrapTextContentPrints(Node $root): void
+    {
+        $scanner = new WireHtmlScanner();
+        $this->walkAndWrap($root, $scanner);
+    }
+
+    private function walkAndWrap(Node $parent, WireHtmlScanner $scanner): void
+    {
+        foreach ($parent as $key => $child) {
+            if (!$child instanceof Node) {
+                continue;
+            }
+
+            if ($child instanceof TextNode) {
+                $scanner->consume($child->getAttribute('data'));
+                continue;
+            }
+
+            if ($child instanceof PrintNode) {
+                if (!$scanner->inAttribute()) {
+                    $binding = WireBindingExtractor::extract($child->getNode('expr'));
+                    if ($binding !== null) {
+                        $parent->setNode($key, $this->wrapPrint($child, $binding));
+                    }
+                }
+                continue;
+            }
+
+            $this->walkAndWrap($child, $scanner);
+        }
+    }
+
+    private function wrapPrint(PrintNode $print, array $binding): Node
+    {
+        $json = json_encode($binding, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        $line = $print->getTemplateLine();
+
+        return new Nodes([
+            new TextNode('<!--w:' . $json . '-->', $line),
+            $print,
+            new TextNode('<!--/w-->', $line),
+        ]);
+    }
+
+    /**
      * Walk an expression tree and return every name+dot-chain found.
      * Recurses through filters, concat, and any other expression — paths are
      * collected for tracking even when the surrounding expression is not
@@ -110,7 +162,7 @@ class WireNodeVisitor implements NodeVisitorInterface
      */
     private function collectPaths(Node $node): array
     {
-        $path = $this->extractPath($node);
+        $path = WireBindingExtractor::extractPath($node);
         if ($path !== null) {
             return [$path];
         }
@@ -125,39 +177,6 @@ class WireNodeVisitor implements NodeVisitorInterface
         }
 
         return $paths;
-    }
-
-    /**
-     * If the node is a pure name + dot-chain (NameExpression at the root,
-     * GetAttrExpression with constant string keys above it), return the
-     * dot-path. Otherwise null.
-     */
-    private function extractPath(Node $node): ?string
-    {
-        if ($node instanceof NameExpression) {
-            return $node->getAttribute('name');
-        }
-
-        if ($node instanceof GetAttrExpression) {
-            $inner = $this->extractPath($node->getNode('node'));
-            if ($inner === null) {
-                return null;
-            }
-
-            $attribute = $node->getNode('attribute');
-            if (!$attribute instanceof ConstantExpression) {
-                return null;
-            }
-
-            $key = $attribute->getAttribute('value');
-            if (!is_string($key)) {
-                return null;
-            }
-
-            return $inner . '.' . $key;
-        }
-
-        return null;
     }
 
     public function getPriority(): int
