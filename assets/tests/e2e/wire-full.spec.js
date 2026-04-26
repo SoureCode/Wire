@@ -250,6 +250,132 @@ test.describe('Wire API', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Scope ID format — verifies debug vs prod naming behaviour
+// ---------------------------------------------------------------------------
+
+test.describe('scope ID', () => {
+    test('scope comment is present in the DOM', async ({ page }) => {
+        const found = await page.evaluate(() => {
+            const walker = document.createTreeWalker(document, NodeFilter.SHOW_COMMENT);
+            let node;
+
+            while ((node = walker.nextNode())) {
+                if (node.textContent.trim().startsWith('wire-scope:')) {
+                    return true;
+                }
+            }
+
+            return false;
+        });
+
+        expect(found).toBe(true);
+    });
+
+    test('scope name is non-empty', async ({ page }) => {
+        const name = await page.evaluate(() => {
+            const walker = document.createTreeWalker(document, NodeFilter.SHOW_COMMENT);
+            let node;
+
+            while ((node = walker.nextNode())) {
+                const text = node.textContent.trim();
+
+                if (text.startsWith('wire-scope:')) {
+                    return text.slice('wire-scope:'.length);
+                }
+            }
+
+            return null;
+        });
+
+        expect(name).toBeTruthy();
+    });
+
+    test('in debug mode scope name equals template path', async ({ page }) => {
+        const name = await page.evaluate(() => {
+            const walker = document.createTreeWalker(document, NodeFilter.SHOW_COMMENT);
+            let node;
+
+            while ((node = walker.nextNode())) {
+                const text = node.textContent.trim();
+
+                if (text.startsWith('wire-scope:')) {
+                    return text.slice('wire-scope:'.length);
+                }
+            }
+
+            return null;
+        });
+
+        expect(name).toBe('wire_test/full.html.twig');
+    });
+
+    test('Wire.get() with scope name read from DOM returns a proxy', async ({ page }) => {
+        const result = await page.evaluate(() => {
+            const walker = document.createTreeWalker(document, NodeFilter.SHOW_COMMENT);
+            let node;
+
+            while ((node = walker.nextNode())) {
+                const text = node.textContent.trim();
+
+                if (text.startsWith('wire-scope:')) {
+                    const name = text.slice('wire-scope:'.length);
+
+                    return typeof window.Wire.get(name);
+                }
+            }
+
+            return null;
+        });
+
+        expect(result).toBe('object');
+    });
+
+    test('Wire.snapshot() with scope name read from DOM returns data', async ({ page }) => {
+        const snap = await page.evaluate(() => {
+            const walker = document.createTreeWalker(document, NodeFilter.SHOW_COMMENT);
+            let node;
+
+            while ((node = walker.nextNode())) {
+                const text = node.textContent.trim();
+
+                if (text.startsWith('wire-scope:')) {
+                    return window.Wire.snapshot(text.slice('wire-scope:'.length));
+                }
+            }
+
+            return null;
+        });
+
+        expect(snap).not.toBeNull();
+        expect(snap.user.name).toBe('Jason');
+    });
+
+    test('closing scope comment matches opening scope comment', async ({ page }) => {
+        const { open, close } = await page.evaluate(() => {
+            const walker = document.createTreeWalker(document, NodeFilter.SHOW_COMMENT);
+            let node;
+            let open = null;
+            let close = null;
+
+            while ((node = walker.nextNode())) {
+                const text = node.textContent.trim();
+
+                if (text.startsWith('wire-scope:')) {
+                    open = text.slice('wire-scope:'.length);
+                } else if (text.startsWith('/wire-scope:')) {
+                    close = text.slice('/wire-scope:'.length);
+                }
+            }
+
+            return { open, close };
+        });
+
+        expect(open).toBeTruthy();
+        expect(close).toBe(open);
+    });
+});
+
+// ---------------------------------------------------------------------------
 // Edge cases
 // ---------------------------------------------------------------------------
 
