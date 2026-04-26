@@ -2,7 +2,7 @@ import { updateBindings } from './bindings.js';
 import { stripIdentityTags } from './identity.js';
 import { deepClone } from './utils/deepClone.js';
 import { deepEqual } from './utils/deepEqual.js';
-import { addListener, fireListeners, getEntry, identityKey, mergeResponse } from './entityRegistry.js';
+import { addListener, appendHistory, fireListeners, getEntry, getHistory, identityKey, mergeResponse } from './entityRegistry.js';
 import { Scope } from './scope.js';
 
 /**
@@ -65,6 +65,10 @@ export function makeProxy(data, scope, path = '', entityOwner = null, entityPath
 
             if (key === '$read') {
                 return (options) => read(target, options);
+            }
+
+            if (key === '$getHistory') {
+                return () => getHistory(target);
             }
 
             const value = target[key];
@@ -198,6 +202,7 @@ async function update(target, options = {}) {
 
     const payload = JSON.parse(text);
     mergeResponse(payload);
+    appendHistory(target, 'update');
     return payload;
 }
 
@@ -240,5 +245,6 @@ async function read(target, options = {}) {
 
     const payload = JSON.parse(text);
     mergeResponse(payload);
+    appendHistory(target, 'read');
     return payload;
 }

@@ -316,6 +316,40 @@ describe('makeProxy', () => {
         expect(data.name).toBe('Server');
     });
 
+    it('$getHistory records read and update operations only', async () => {
+        const data = {
+            __class: 'User',
+            __id: 1,
+            __read:   { url: '/api/users/1', method: 'GET' },
+            __update: { url: '/api/users/1', method: 'PATCH' },
+            name: 'Alice',
+        };
+        registerEntity(data);
+        const proxy = makeProxy(data, makeScope(data));
+
+        proxy.name = 'Bob';
+        expect(proxy.$getHistory()).toEqual([]);
+
+        globalThis.fetch = () => Promise.resolve({
+            ok: true,
+            status: 200,
+            text: () => Promise.resolve(JSON.stringify({
+                __class: 'User',
+                __id: 1,
+                name: 'Bob',
+            })),
+        });
+
+        await proxy.$update();
+        await proxy.$read();
+
+        const history = proxy.$getHistory();
+        expect(history).toHaveLength(2);
+        expect(history[0].op).toBe('update');
+        expect(history[0].snapshot).toMatchObject({ name: 'Bob' });
+        expect(history[1].op).toBe('read');
+    });
+
     it('triggers DOM updates when a property is set', () => {
         const node = document.createTextNode('');
         const data = { name: 'Jason' };

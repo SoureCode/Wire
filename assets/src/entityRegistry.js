@@ -148,6 +148,34 @@ export function mergeResponse(response) {
 }
 
 /**
+ * Append a history record on the entity's entry. Called after a successful
+ * server round-trip ($read or $update). No-op for non-entity targets.
+ *
+ * @param {Record<string, unknown>} target
+ * @param {'read'|'update'} op
+ */
+export function appendHistory(target, op) {
+    const entry = getEntry(target);
+    if (entry === undefined) {
+        return;
+    }
+    entry.history.push({
+        timestamp: Date.now(),
+        op,
+        snapshot: stripIdentityTags(deepClone(entry.canonical)),
+    });
+}
+
+/**
+ * @param {Record<string, unknown>} target
+ * @returns {Array<{ timestamp: number, op: string, snapshot: Record<string,unknown> }>}
+ */
+export function getHistory(target) {
+    const entry = getEntry(target);
+    return entry === undefined ? [] : entry.history.slice();
+}
+
+/**
  * @param {Record<string, unknown>} target
  * @param {{ path?: string, callback: Function }} listener
  * @returns {() => void} unsubscribe
