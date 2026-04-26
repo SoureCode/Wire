@@ -1,0 +1,6 @@
+{% wire %}
+<div id="scope-a">
+    <span id="cross-a-name" data-wire="user.name">{{ user.name }}</span>
+    <span id="cross-a-email" data-wire="user.email">{{ user.email }}</span>
+    <input id="cross-a-input" type="text" data-wire="user.name:value" value="{{ user.name }}">
+</div>

@@ -1,0 +1,9 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Wire Test — Multi Instance{% endblock %}
+
+{% block body %}
+{% for user in users %}
+    {% include 'wire_test/_user_card.html.twig' with {user: user} only %}
+{% endfor %}
+{% endblock %}

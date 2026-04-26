@@ -1,0 +1,12 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Wire Test — Cascade{% endblock %}
+
+{% block body %}
+{% wire cascade %}
+<div id="cascade-parent">
+    <span id="cascade-parent-name" data-wire="user.name">{{ user.name }}</span>
+    <span id="cascade-parent-email" data-wire="user.email">{{ user.email }}</span>
+</div>
+{% include 'wire_test/cascade_child.html.twig' %}
+{% endblock %}
