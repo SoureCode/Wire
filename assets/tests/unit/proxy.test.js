@@ -139,6 +139,56 @@ describe('makeProxy', () => {
         expect(proxy.$isDirty()).toBe(false);
     });
 
+    it('$on(callback) fires for any field change on the entity', () => {
+        const data = { __class: 'User', __id: 1, name: 'Alice', email: 'a@x' };
+        registerEntity(data);
+        const proxy = makeProxy(data, makeScope(data));
+
+        const events = [];
+        const off = proxy.$on((next, prev, p) => events.push({ next, prev, p }));
+
+        proxy.name = 'Bob';
+        proxy.email = 'b@x';
+        off();
+        proxy.name = 'Carol';
+
+        expect(events).toEqual([
+            { next: 'Bob', prev: 'Alice', p: 'name' },
+            { next: 'b@x', prev: 'a@x',   p: 'email' },
+        ]);
+    });
+
+    it('$on(path, callback) fires only for that path or sub-paths', () => {
+        const data = { __class: 'User', __id: 1, address: { street: 'Main', zip: '1' }, name: 'Alice' };
+        registerEntity(data);
+        const proxy = makeProxy(data, makeScope(data));
+
+        const events = [];
+        proxy.$on('address', (next, prev, p) => events.push(p));
+
+        proxy.name = 'Bob';
+        proxy.address.street = 'Oak';
+        proxy.address.zip = '2';
+
+        expect(events).toEqual(['address.street', 'address.zip']);
+    });
+
+    it('$on returns a no-op unsubscribe for non-entity proxies', () => {
+        const data = { name: 'Alice' };
+        const proxy = makeProxy(data, makeScope(data));
+        const off  = proxy.$on(() => {});
+        expect(typeof off).toBe('function');
+        off();
+    });
+
+    it('$on throws on bad arguments', () => {
+        const data = { __class: 'U', __id: 1 };
+        registerEntity(data);
+        const proxy = makeProxy(data, makeScope(data));
+        expect(() => proxy.$on()).toThrow(TypeError);
+        expect(() => proxy.$on(123)).toThrow(TypeError);
+    });
+
     it('triggers DOM updates when a property is set', () => {
         const node = document.createTextNode('');
         const data = { name: 'Jason' };

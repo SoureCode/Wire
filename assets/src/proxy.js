@@ -2,7 +2,7 @@ import { updateBindings } from './bindings.js';
 import { stripIdentityTags } from './identity.js';
 import { deepClone } from './utils/deepClone.js';
 import { deepEqual } from './utils/deepEqual.js';
-import { getEntry } from './entityRegistry.js';
+import { addListener, fireListeners, getEntry, identityKey } from './entityRegistry.js';
 import { Scope } from './scope.js';
 
 /**
@@ -16,17 +16,23 @@ import { Scope } from './scope.js';
  * - `$getSnapshot()` — fresh deep clone of this object with identity tags stripped
  * - `$isDirty()`     — true if current state differs from the last server-confirmed snapshot
  * - `$revert()`      — restore fields to the last server-confirmed snapshot
+ * - `$on(callback)` / `$on(path, callback)` — subscribe to entity changes; returns unsubscribe
  *
- * `$isDirty` and `$revert` are no-ops on non-entity proxies (no `__id`).
+ * `$isDirty`, `$revert`, and `$on` are no-ops on non-entity proxies (no `__id`).
  *
  * The `$` prefix is reserved; entity field names beginning with `$` are not supported.
  *
  * @param {Record<string, unknown>} data
  * @param {Scope} scope
- * @param {string} [path] - dot-path prefix for this proxy level
+ * @param {string} [path] - dot-path prefix for this proxy level (relative to scope root)
+ * @param {Record<string, unknown>|null} [entityOwner] - nearest enclosing entity target
+ * @param {string} [entityPath] - dot-path of this level relative to the entity owner
  * @returns {Record<string, unknown>}
  */
-export function makeProxy(data, scope, path = '') {
+export function makeProxy(data, scope, path = '', entityOwner = null, entityPath = '') {
+    const owner = identityKey(data) !== null ? data : entityOwner;
+    const ownerPath = owner === data ? '' : entityPath;
+
     return new Proxy(data, {
         get(target, key) {
             if (key === '$getSnapshot') {
@@ -49,20 +55,35 @@ export function makeProxy(data, scope, path = '') {
                 return () => revert(target, scope, path);
             }
 
+            if (key === '$on') {
+                return (...args) => onListener(target, args);
+            }
+
             const value = target[key];
 
             if (value !== null && typeof value === 'object') {
-                return makeProxy(value, scope, path ? `${path}.${key}` : key);
+                return makeProxy(
+                    value,
+                    scope,
+                    path ? `${path}.${key}` : key,
+                    owner,
+                    ownerPath ? `${ownerPath}.${key}` : key,
+                );
             }
 
             return value;
         },
         set(target, key, value) {
+            const oldValue = deepClone(target[key]);
             target[key] = value;
 
             const fullPath = path ? `${path}.${key}` : key;
-
             updateBindings(scope, fullPath);
+
+            if (owner !== null) {
+                const relPath = ownerPath ? `${ownerPath}.${key}` : key;
+                fireListeners(owner, relPath, value, oldValue);
+            }
 
             return true;
         },
@@ -107,4 +128,28 @@ function revert(target, scope, path) {
         delete target[key];
         updateBindings(scope, path ? `${path}.${key}` : key);
     }
+}
+
+/**
+ * @param {Record<string, unknown>} target
+ * @param {unknown[]} args
+ */
+function onListener(target, args) {
+    if (identityKey(target) === null) {
+        return () => {};
+    }
+
+    let path;
+    let callback;
+
+    if (args.length === 1 && typeof args[0] === 'function') {
+        callback = args[0];
+    } else if (args.length >= 2 && typeof args[0] === 'string' && typeof args[1] === 'function') {
+        path     = args[0];
+        callback = args[1];
+    } else {
+        throw new TypeError('$on expects (callback) or (path, callback).');
+    }
+
+    return addListener(target, { path, callback });
 }

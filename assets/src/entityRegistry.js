@@ -40,11 +40,59 @@ export function registerEntity(canonical) {
     if (key === null) {
         return;
     }
+    const existing = registry.get(key);
     registry.set(key, {
         canonical,
         baseline: stripIdentityTags(deepClone(canonical)),
-        history: [],
+        history: existing?.history ?? [],
+        listeners: existing?.listeners ?? new Set(),
     });
+}
+
+/**
+ * @param {Record<string, unknown>} target
+ * @param {{ path?: string, callback: Function }} listener
+ * @returns {() => void} unsubscribe
+ */
+export function addListener(target, listener) {
+    const entry = getEntry(target);
+    if (entry === undefined) {
+        return () => {};
+    }
+    entry.listeners.add(listener);
+    return () => entry.listeners.delete(listener);
+}
+
+/**
+ * Fire all listeners on the entity that match the given relative path.
+ * A listener with no path matches everything; a listener with path `p`
+ * matches when relativePath === p OR relativePath starts with `p.`.
+ *
+ * @param {Record<string, unknown>} entityTarget
+ * @param {string} relativePath
+ * @param {unknown} newValue
+ * @param {unknown} oldValue
+ */
+export function fireListeners(entityTarget, relativePath, newValue, oldValue) {
+    const entry = getEntry(entityTarget);
+    if (entry === undefined) {
+        return;
+    }
+    for (const listener of entry.listeners) {
+        if (listener.path !== undefined && !pathMatches(relativePath, listener.path)) {
+            continue;
+        }
+        listener.callback(newValue, oldValue, relativePath);
+    }
+}
+
+/**
+ * @param {string} relativePath
+ * @param {string} listenerPath
+ * @returns {boolean}
+ */
+function pathMatches(relativePath, listenerPath) {
+    return relativePath === listenerPath || relativePath.startsWith(listenerPath + '.');
 }
 
 /**
