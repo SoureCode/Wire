@@ -1,19 +1,28 @@
-# Future: Submit Semantics for Collections
+# Future: Collection Semantics for Entity Methods
 
-## Problem
+## Decision
 
-`Wire.submit(value)` is well-defined for a single identified entity. Collections are the common Symfony case: a list of `User`s, a paginated table, a tag list. What does `Wire.submit(users)` mean?
+**Collections are no-op for `$`-methods.** A collection proxy exposes no `$read`, `$update`, `$on`, `$isDirty`, `$revert`, `$getHistory`, `$getClass`, `$getId`, or `$getSnapshot`. Calling any `$`-method on a collection throws.
 
-## Possible Semantics
+Callers iterate and invoke per element:
 
-- **Save all.** Send the full collection, server replaces. Loud, simple, dangerous.
-- **Save dirty.** Wire tracks which elements were mutated since render and sends only those. Requires per-element dirty tracking.
-- **Save one.** `Wire.submit(users[0])` — submit operates on the element, not the collection. The collection itself has no submit semantics.
-- **No-op.** Collections can't be submitted. Devs iterate and submit each element themselves.
+```js
+for (const user of users) {
+    if (user.$isDirty()) {
+        await user.$update();
+    }
+}
+```
 
-## Open Questions
+## Rationale
 
-- Is "the collection" itself an identity, or just a container of identities?
-- Add/remove operations — is "deleted from this list" the same as "delete the entity"? Almost never. How do we distinguish?
-- Bulk endpoints — does `#[Wire(submit:)]` on the entity scale, or do we need a separate `#[Wire(bulkSubmit:)]`?
-- Ordering / reorder — sortable lists are common; does Wire know about order, or is that user code?
+- A collection is **just a container of identities**, not an identity itself. It has no `__class` / `__id` to merge against.
+- "Removed from this list" almost never means "delete the entity" — conflating them is dangerous.
+- Bulk endpoints, ordering, and pagination are application concerns. Wire's job ends at single-entity round-trips; the application composes them.
+- Avoids hidden cost: a collection-level `$update` could silently fan out N requests.
+
+## Out of Scope
+
+- Bulk endpoints (`bulkUpdateRouteName`): not provided. Application code calls a custom endpoint directly when needed.
+- Reorder / sort persistence: application concern.
+- Collection-level history: not tracked. Per-element history is available via `$getHistory()`.
