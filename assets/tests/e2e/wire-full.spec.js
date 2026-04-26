@@ -142,16 +142,16 @@ test.describe('Wire API', () => {
         expect(isFunction).toBe(true);
     });
 
-    test('Wire.getScope(insideScope) returns object with get + snapshot', async ({ page }) => {
+    test('Wire.getScope(insideScope) returns object with get + getSnapshot', async ({ page }) => {
         const shape = await page.evaluate((sel) => {
             const scope = window.Wire.getScope(document.querySelector(sel));
-            return { get: typeof scope?.get, snapshot: typeof scope?.snapshot };
+            return { get: typeof scope?.get, getSnapshot: typeof scope?.getSnapshot };
         }, ANCHOR);
-        expect(shape).toEqual({ get: 'function', snapshot: 'function' });
+        expect(shape).toEqual({ get: 'function', getSnapshot: 'function' });
     });
 
-    test('Wire.getScope(outsideScope) returns null', async ({ page }) => {
-        const result = await page.evaluate(() => window.Wire.getScope(document.documentElement));
+    test('Wire.getScope(detachedElement) returns null', async ({ page }) => {
+        const result = await page.evaluate(() => window.Wire.getScope(document.createElement('div')));
         expect(result).toBeNull();
     });
 
@@ -160,20 +160,20 @@ test.describe('Wire API', () => {
         expect(value).toBeUndefined();
     });
 
-    test('scope.snapshot() returns current data', async ({ page }) => {
-        const snap = await page.evaluate((sel) => window.Wire.getScope(document.querySelector(sel)).snapshot(), ANCHOR);
+    test('scope.getSnapshot() returns current data', async ({ page }) => {
+        const snap = await page.evaluate((sel) => window.Wire.getScope(document.querySelector(sel)).getSnapshot(), ANCHOR);
         expect(snap.user.name).toBe('Jason');
         expect(snap.user.email).toBe('jason@example.com');
         expect(snap.user.status).toBe('active');
     });
 
-    test('scope.snapshot(name) returns just that variable', async ({ page }) => {
-        const user = await page.evaluate((sel) => window.Wire.getScope(document.querySelector(sel)).snapshot('user'), ANCHOR);
+    test('scope.getSnapshot(name) returns just that variable', async ({ page }) => {
+        const user = await page.evaluate((sel) => window.Wire.getScope(document.querySelector(sel)).getSnapshot('user'), ANCHOR);
         expect(user.name).toBe('Jason');
     });
 
     test('scope.snapshot strips identity tags', async ({ page }) => {
-        const snap = await page.evaluate((sel) => window.Wire.getScope(document.querySelector(sel)).snapshot(), ANCHOR);
+        const snap = await page.evaluate((sel) => window.Wire.getScope(document.querySelector(sel)).getSnapshot(), ANCHOR);
         expect(snap.user.__class).toBeUndefined();
         expect(snap.user.__id).toBeUndefined();
         expect(snap.user.__submit).toBeUndefined();
@@ -181,7 +181,7 @@ test.describe('Wire API', () => {
 
     test('snapshot is a deep clone — mutations do not affect live data', async ({ page }) => {
         await page.evaluate((sel) => {
-            const snap = window.Wire.getScope(document.querySelector(sel)).snapshot();
+            const snap = window.Wire.getScope(document.querySelector(sel)).getSnapshot();
             snap.user.name = 'MUTATED';
         }, ANCHOR);
         await expect(page.locator('#name-heading')).toHaveText('Jason');
@@ -189,7 +189,7 @@ test.describe('Wire API', () => {
 
     test('snapshot reflects programmatic changes', async ({ page }) => {
         await page.evaluate((sel) => { window.Wire.getScope(document.querySelector(sel)).get('user').name = 'Updated'; }, ANCHOR);
-        const snap = await page.evaluate((sel) => window.Wire.getScope(document.querySelector(sel)).snapshot(), ANCHOR);
+        const snap = await page.evaluate((sel) => window.Wire.getScope(document.querySelector(sel)).getSnapshot(), ANCHOR);
         expect(snap.user.name).toBe('Updated');
     });
 });
@@ -260,7 +260,7 @@ test.describe('edge cases', () => {
 
     test('snapshot after two-way input reflects typed value', async ({ page }) => {
         await page.locator('#name-input').fill('TypedValue');
-        const snap = await page.evaluate((sel) => window.Wire.getScope(document.querySelector(sel)).snapshot(), ANCHOR);
+        const snap = await page.evaluate((sel) => window.Wire.getScope(document.querySelector(sel)).getSnapshot(), ANCHOR);
         expect(snap.user.name).toBe('TypedValue');
     });
 

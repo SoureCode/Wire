@@ -83,30 +83,30 @@ test.describe('cross-scope propagation', () => {
 
 test.describe('snapshot consistency', () => {
     test('parent snapshot has correct initial data', async ({ page }) => {
-        const snap = await page.evaluate((sel) => window.Wire.getScope(document.querySelector(sel)).snapshot(), PARENT_ANCHOR);
+        const snap = await page.evaluate((sel) => window.Wire.getScope(document.querySelector(sel)).getSnapshot(), PARENT_ANCHOR);
         expect(snap.user.name).toBe('Jason');
         expect(snap.user.email).toBe('jason@example.com');
     });
 
     test('child snapshot has correct initial data', async ({ page }) => {
-        const snap = await page.evaluate((sel) => window.Wire.getScope(document.querySelector(sel)).snapshot(), CHILD_ANCHOR);
+        const snap = await page.evaluate((sel) => window.Wire.getScope(document.querySelector(sel)).getSnapshot(), CHILD_ANCHOR);
         expect(snap.user.name).toBe('Jason');
     });
 
     test('after mutating parent, child snapshot reflects change', async ({ page }) => {
         await page.evaluate((sel) => { window.Wire.getScope(document.querySelector(sel)).get('user').name = 'Bob'; }, PARENT_ANCHOR);
-        const snap = await page.evaluate((sel) => window.Wire.getScope(document.querySelector(sel)).snapshot(), CHILD_ANCHOR);
+        const snap = await page.evaluate((sel) => window.Wire.getScope(document.querySelector(sel)).getSnapshot(), CHILD_ANCHOR);
         expect(snap.user.name).toBe('Bob');
     });
 
     test('after mutating child, parent snapshot reflects change', async ({ page }) => {
         await page.evaluate((sel) => { window.Wire.getScope(document.querySelector(sel)).get('user').name = 'Alice'; }, CHILD_ANCHOR);
-        const snap = await page.evaluate((sel) => window.Wire.getScope(document.querySelector(sel)).snapshot(), PARENT_ANCHOR);
+        const snap = await page.evaluate((sel) => window.Wire.getScope(document.querySelector(sel)).getSnapshot(), PARENT_ANCHOR);
         expect(snap.user.name).toBe('Alice');
     });
 
     test('snapshot with variable name returns just that variable', async ({ page }) => {
-        const just = await page.evaluate((sel) => window.Wire.getScope(document.querySelector(sel)).snapshot('user'), PARENT_ANCHOR);
+        const just = await page.evaluate((sel) => window.Wire.getScope(document.querySelector(sel)).getSnapshot('user'), PARENT_ANCHOR);
         expect(just.name).toBe('Jason');
         expect(just.email).toBe('jason@example.com');
     });

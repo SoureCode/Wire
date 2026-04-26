@@ -73,7 +73,7 @@ test.describe('Wire API in production mode', () => {
     });
 
     test('scope.snapshot returns data with identity tags stripped', async ({ page }) => {
-        const snap = await page.evaluate((sel) => window.Wire.getScope(document.querySelector(sel)).snapshot(), ANCHOR);
+        const snap = await page.evaluate((sel) => window.Wire.getScope(document.querySelector(sel)).getSnapshot(), ANCHOR);
         expect(snap.user.name).toBe('Jason');
         expect(snap.user.email).toBe('jason@example.com');
         expect(snap.user.__class).toBeUndefined();
@@ -113,7 +113,7 @@ test.describe('reactivity in production mode', () => {
 
     test('snapshot reflects programmatic changes in production mode', async ({ page }) => {
         await page.evaluate((sel) => { window.Wire.getScope(document.querySelector(sel)).get('user').name = 'ProdSnap'; }, ANCHOR);
-        const snap = await page.evaluate((sel) => window.Wire.getScope(document.querySelector(sel)).snapshot(), ANCHOR);
+        const snap = await page.evaluate((sel) => window.Wire.getScope(document.querySelector(sel)).getSnapshot(), ANCHOR);
         expect(snap.user.name).toBe('ProdSnap');
     });
 });

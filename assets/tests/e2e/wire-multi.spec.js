@@ -129,7 +129,7 @@ test.describe('snapshot per card', () => {
     test('each card snapshot reflects its own data', async ({ page }) => {
         const names = await page.evaluate(() => {
             return Array.from(document.querySelectorAll('.user-card')).map(card =>
-                window.Wire.getScope(card).snapshot().user.name
+                window.Wire.getScope(card).getSnapshot().user.name
             );
         });
         expect(names).toEqual(['Alice', 'Bob', 'Carol']);
@@ -140,7 +140,7 @@ test.describe('snapshot per card', () => {
             window.Wire.getScope(document.querySelectorAll('.user-card')[1]).get('user').name = 'Updated';
         });
         const name = await page.evaluate(() => {
-            return window.Wire.getScope(document.querySelectorAll('.user-card')[1]).snapshot().user.name;
+            return window.Wire.getScope(document.querySelectorAll('.user-card')[1]).getSnapshot().user.name;
         });
         expect(name).toBe('Updated');
     });

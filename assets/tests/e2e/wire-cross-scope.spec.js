@@ -110,24 +110,24 @@ test.describe('two-way binding cross-scope', () => {
 
 test.describe('snapshot consistency', () => {
     test('scope A snapshot reflects name', async ({ page }) => {
-        const snap = await page.evaluate((sel) => window.Wire.getScope(document.querySelector(sel)).snapshot(), A_ANCHOR);
+        const snap = await page.evaluate((sel) => window.Wire.getScope(document.querySelector(sel)).getSnapshot(), A_ANCHOR);
         expect(snap.user.name).toBe('Jason');
     });
 
     test('after mutating scope A, scope B snapshot reflects change', async ({ page }) => {
         await page.evaluate((sel) => { window.Wire.getScope(document.querySelector(sel)).get('user').name = 'Bob'; }, A_ANCHOR);
-        const snap = await page.evaluate((sel) => window.Wire.getScope(document.querySelector(sel)).snapshot(), B_ANCHOR);
+        const snap = await page.evaluate((sel) => window.Wire.getScope(document.querySelector(sel)).getSnapshot(), B_ANCHOR);
         expect(snap.user.name).toBe('Bob');
     });
 
     test('after mutating scope B, scope A snapshot reflects change', async ({ page }) => {
         await page.evaluate((sel) => { window.Wire.getScope(document.querySelector(sel)).get('user').name = 'Alice'; }, B_ANCHOR);
-        const snap = await page.evaluate((sel) => window.Wire.getScope(document.querySelector(sel)).snapshot(), A_ANCHOR);
+        const snap = await page.evaluate((sel) => window.Wire.getScope(document.querySelector(sel)).getSnapshot(), A_ANCHOR);
         expect(snap.user.name).toBe('Alice');
     });
 
     test('snapshot strips identity tags', async ({ page }) => {
-        const snap = await page.evaluate((sel) => window.Wire.getScope(document.querySelector(sel)).snapshot(), A_ANCHOR);
+        const snap = await page.evaluate((sel) => window.Wire.getScope(document.querySelector(sel)).getSnapshot(), A_ANCHOR);
         expect(snap.user.__class).toBeUndefined();
         expect(snap.user.__id).toBeUndefined();
     });
