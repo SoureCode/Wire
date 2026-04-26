@@ -9,8 +9,10 @@ class WireScopeEndNode extends Node
 {
     public function __construct(string $templateName, int $lineno)
     {
-        $var = '__wire_' . md5($templateName) . '__';
-        parent::__construct([], ['template' => $templateName, 'var' => $var], $lineno);
+        parent::__construct([], [
+            'template' => $templateName,
+            'var'      => '__wire_' . md5($templateName) . '__',
+        ], $lineno);
     }
 
     public function compile(Compiler $compiler): void
@@ -19,11 +21,10 @@ class WireScopeEndNode extends Node
         $var          = $this->getAttribute('var');
 
         $scopeId = WireHelper::scopeId($templateName, $compiler->getEnvironment()->isDebug());
-        $marker  = addslashes($scopeId);
 
         $compiler
-            ->write("if (!empty(\${$var})) {\n")
-            ->write("    echo '<!-- /wire-scope:" . $marker . " -->';\n")
+            ->write("if (\${$var} !== '') {\n")
+            ->write("    echo '<!-- /wire-scope:" . addslashes($scopeId) . " -->';\n")
             ->write("}\n");
     }
 }

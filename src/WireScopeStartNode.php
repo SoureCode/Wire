@@ -7,25 +7,26 @@ use Twig\Node\Node;
 
 class WireScopeStartNode extends Node
 {
-    public function __construct(string $templateName, array $paths, int $lineno)
+    public function __construct(string $templateName, array $rootNames, int $lineno)
     {
-        parent::__construct([], ['template' => $templateName, 'paths' => $paths, 'var' => '__wire_' . md5($templateName) . '__'], $lineno);
+        parent::__construct([], [
+            'template' => $templateName,
+            'roots'    => $rootNames,
+            'var'      => '__wire_' . md5($templateName) . '__',
+        ], $lineno);
     }
 
     public function compile(Compiler $compiler): void
     {
         $templateName = $this->getAttribute('template');
-        $paths        = $this->getAttribute('paths');
+        $roots        = $this->getAttribute('roots');
         $var          = $this->getAttribute('var');
 
         $scopeId = WireHelper::scopeId($templateName, $compiler->getEnvironment()->isDebug());
-        $marker  = addslashes($scopeId);
 
         $compiler
-            ->write("\${$var} = \\SoureCode\\Wire\\WireHelper::extract(\$context, " . var_export($paths, true) . ", " . var_export($scopeId, true) . ");\n")
-            ->write("if (!empty(\${$var})) {\n")
-            ->write("    echo '<!-- wire-scope:" . $marker . " -->';\n")
-            ->write("    echo '<script type=\"wire\">' . json_encode(\${$var}) . '</script>';\n")
-            ->write("}\n");
+            ->write("\${$var} = \$this->env->getRuntime(\\SoureCode\\Wire\\WireRuntime::class)")
+            ->raw("->renderScope(\$context, " . var_export($roots, true) . ", " . var_export($scopeId, true) . ");\n")
+            ->write("echo \${$var};\n");
     }
 }
