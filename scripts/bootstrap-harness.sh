@@ -43,9 +43,13 @@ echo 'DATABASE_URL="sqlite:///:memory:"' >> "$HARNESS/.env.test"
 echo "==> Patching base template to include Wire bundle..."
 sed -i 's|</body>|    <script src="/wire.js"></script>\n    </body>|' "$HARNESS/templates/base.html.twig"
 
+echo "==> Building Wire JS bundle..."
+(cd "$ROOT" && npm run build >/dev/null)
+
 echo "==> Copying application files..."
 cp -r "$SRC/src/"*       "$HARNESS/src/"
 cp -r "$SRC/templates/"* "$HARNESS/templates/"
 cp -r "$SRC/tests/"*     "$HARNESS/tests/"
+cp "$ROOT/dist/wire.iife.js" "$HARNESS/public/wire.js"
 
 echo "==> Done. Harness ready at $HARNESS"
