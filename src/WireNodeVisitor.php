@@ -74,6 +74,7 @@ class WireNodeVisitor implements NodeVisitorInterface
 
             if (!empty($paths) && $optedIn) {
                 $this->wrapTextContentPrints($node);
+                (new WireAttrInjector())->process($node);
 
                 $node->setNode('display_start', new Nodes([
                     new WireScopeStartNode($templateName, $paths, $node->getTemplateLine()),
