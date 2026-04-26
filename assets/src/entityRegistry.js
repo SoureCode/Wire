@@ -1,5 +1,7 @@
 import { stripIdentityTags } from './identity.js';
 import { deepClone } from './utils/deepClone.js';
+import { isPlainObject } from './utils/isPlainObject.js';
+import { updateBindings } from './bindings.js';
 
 /**
  * Per-entity bookkeeping keyed by identity (`${__class}#${JSON.stringify(__id)}`).
@@ -46,7 +48,103 @@ export function registerEntity(canonical) {
         baseline: stripIdentityTags(deepClone(canonical)),
         history: existing?.history ?? [],
         listeners: existing?.listeners ?? new Set(),
+        presence: existing?.presence ?? [],
     });
+}
+
+/**
+ * Walk a scope's data tree and record the path at which each registered
+ * entity appears. Called once per scope during init so that later identity
+ * merges can refresh the right DOM bindings.
+ *
+ * @param {{ data: Record<string, unknown>, bindings: Array<unknown>, refMap: Record<string, unknown> }} scope
+ */
+export function registerScopePresence(scope) {
+    walk(scope.data, '', scope);
+}
+
+/**
+ * @param {unknown} value
+ * @param {string} path
+ * @param {object} scope
+ */
+function walk(value, path, scope) {
+    if (Array.isArray(value)) {
+        for (let i = 0; i < value.length; i++) {
+            walk(value[i], path ? `${path}.${i}` : String(i), scope);
+        }
+        return;
+    }
+    if (!isPlainObject(value)) {
+        return;
+    }
+    const entry = getEntry(value);
+    if (entry !== undefined && !entry.presence.some(p => p.scope === scope && p.path === path)) {
+        entry.presence.push({ scope, path });
+    }
+    for (const key of Object.keys(value)) {
+        walk(value[key], path ? `${path}.${key}` : key, scope);
+    }
+}
+
+/**
+ * Merge a server payload into the canonical entity by identity, refresh
+ * the baseline, and re-render every scope that holds this entity.
+ * Returns the changed field names.
+ *
+ * @param {Record<string, unknown>} payload
+ * @returns {string[]} changed field names
+ */
+export function mergeIntoEntity(payload) {
+    const entry = getEntry(payload);
+    if (entry === undefined) {
+        return [];
+    }
+
+    const changed = [];
+    for (const key of Object.keys(payload)) {
+        if (key === '__class' || key === '__id' || key === '__submit' || key === '__read' || key === '__update') {
+            continue;
+        }
+        entry.canonical[key] = payload[key];
+        changed.push(key);
+    }
+
+    for (const { scope, path } of entry.presence) {
+        for (const key of changed) {
+            updateBindings(scope, path ? `${path}.${key}` : key);
+        }
+    }
+
+    entry.baseline = stripIdentityTags(deepClone(entry.canonical));
+    return changed;
+}
+
+/**
+ * Apply a server response to the registry. Accepts a single tagged payload
+ * or an array of tagged payloads. Returns the list of identity keys that
+ * were merged.
+ *
+ * @param {unknown} response
+ * @returns {string[]}
+ */
+export function mergeResponse(response) {
+    const merged = [];
+    const list   = Array.isArray(response) ? response : [response];
+
+    for (const item of list) {
+        if (!isPlainObject(item)) {
+            continue;
+        }
+        const key = identityKey(item);
+        if (key === null) {
+            continue;
+        }
+        mergeIntoEntity(item);
+        merged.push(key);
+    }
+
+    return merged;
 }
 
 /**

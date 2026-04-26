@@ -189,6 +189,78 @@ describe('makeProxy', () => {
         expect(() => proxy.$on(123)).toThrow(TypeError);
     });
 
+    it('$update throws when the entity has no __id', async () => {
+        const data = { __class: 'User', name: 'Alice' };
+        const proxy = makeProxy(data, makeScope(data));
+        await expect(proxy.$update()).rejects.toThrow(/no __id/);
+    });
+
+    it('$update throws when __update endpoint is missing', async () => {
+        const data = { __class: 'User', __id: 1, name: 'Alice' };
+        registerEntity(data);
+        const proxy = makeProxy(data, makeScope(data));
+        await expect(proxy.$update()).rejects.toThrow(/no __update/);
+    });
+
+    it('$update POSTs the snapshot, merges the response, and refreshes baseline', async () => {
+        const data = {
+            __class: 'User',
+            __id: 1,
+            __update: { url: '/api/users/1', method: 'PATCH' },
+            name: 'Alice',
+        };
+        registerEntity(data);
+        const proxy = makeProxy(data, makeScope(data));
+
+        const calls = [];
+        globalThis.fetch = (url, init) => {
+            calls.push({ url, init });
+            return Promise.resolve({
+                ok: true,
+                status: 200,
+                text: () => Promise.resolve(JSON.stringify({
+                    __class: 'User',
+                    __id: 1,
+                    name: 'Alice',
+                    status: 'saved',
+                })),
+            });
+        };
+
+        proxy.name = 'Bob';
+        const result = await proxy.$update();
+
+        expect(calls).toHaveLength(1);
+        expect(calls[0].url).toBe('/api/users/1');
+        expect(calls[0].init.method).toBe('PATCH');
+        expect(JSON.parse(calls[0].init.body)).toEqual({ name: 'Bob' });
+        expect(data.status).toBe('saved');
+        expect(data.name).toBe('Alice');
+        expect(proxy.$isDirty()).toBe(false);
+        expect(result.status).toBe('saved');
+    });
+
+    it('$update rejects on 4xx with status and response on the error', async () => {
+        const data = {
+            __class: 'User',
+            __id: 1,
+            __update: { url: '/api/users/1', method: 'PATCH' },
+            name: 'Alice',
+        };
+        registerEntity(data);
+        const proxy = makeProxy(data, makeScope(data));
+
+        globalThis.fetch = () => Promise.resolve({
+            ok: false,
+            status: 422,
+            text: () => Promise.resolve(''),
+        });
+
+        proxy.name = 'Bob';
+        await expect(proxy.$update()).rejects.toMatchObject({ status: 422 });
+        expect(data.name).toBe('Bob');
+    });
+
     it('triggers DOM updates when a property is set', () => {
         const node = document.createTextNode('');
         const data = { name: 'Jason' };

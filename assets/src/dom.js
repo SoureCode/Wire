@@ -2,7 +2,7 @@
 
 import { resolveRefs, buildRefMap, buildCrossScopeRefs } from './refs.js';
 import { unifyByIdentity } from './identity.js';
-import { clearRegistry, registerEntity } from './entityRegistry.js';
+import { clearRegistry, registerEntity, registerScopePresence } from './entityRegistry.js';
 import { applyBinding } from './bindings.js';
 import { extractPaths } from './path.js';
 import { createScope, findScopeFor } from './scope.js';
@@ -69,6 +69,7 @@ export function parseScopes() {
 
     for (const draft of drafts) {
         const scope = createScope(draft);
+        registerScopePresence(scope);
 
         for (const binding of scope.bindings) {
             if (binding.kind === 'attr' && binding.attr === 'value' && isFormControl(binding.node) && isPurePath(binding.descriptor)) {

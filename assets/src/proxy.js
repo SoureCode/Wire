@@ -2,7 +2,7 @@ import { updateBindings } from './bindings.js';
 import { stripIdentityTags } from './identity.js';
 import { deepClone } from './utils/deepClone.js';
 import { deepEqual } from './utils/deepEqual.js';
-import { addListener, fireListeners, getEntry, identityKey } from './entityRegistry.js';
+import { addListener, fireListeners, getEntry, identityKey, mergeResponse } from './entityRegistry.js';
 import { Scope } from './scope.js';
 
 /**
@@ -57,6 +57,10 @@ export function makeProxy(data, scope, path = '', entityOwner = null, entityPath
 
             if (key === '$on') {
                 return (...args) => onListener(target, args);
+            }
+
+            if (key === '$update') {
+                return (options) => update(target, options);
             }
 
             const value = target[key];
@@ -152,4 +156,43 @@ function onListener(target, args) {
     }
 
     return addListener(target, { path, callback });
+}
+
+/**
+ * @param {Record<string, unknown>} target
+ * @param {{ method?: string, url?: string, headers?: Record<string,string> } | undefined} options
+ * @returns {Promise<unknown>}
+ */
+async function update(target, options = {}) {
+    if (!('__id' in target) || target['__id'] === undefined || target['__id'] === null) {
+        throw new Error('$update: entity has no __id; identity-less proxies cannot round-trip.');
+    }
+
+    const config = target['__update'];
+    if (!config || typeof config.url !== 'string' || typeof config.method !== 'string') {
+        throw new Error('$update: entity has no __update endpoint; declare #[Wire(updateRouteName: ...)] on the class.');
+    }
+
+    const url     = options.url     ?? config.url;
+    const method  = options.method  ?? config.method;
+    const headers = { 'Content-Type': 'application/json', ...(options.headers ?? {}) };
+    const body    = JSON.stringify(stripIdentityTags(deepClone(target)));
+
+    const response = await fetch(url, { method, headers, body });
+
+    if (!response.ok) {
+        const error = new Error(`$update: server responded ${response.status}`);
+        error.status   = response.status;
+        error.response = response;
+        throw error;
+    }
+
+    const text = await response.text();
+    if (text.length === 0) {
+        return null;
+    }
+
+    const payload = JSON.parse(text);
+    mergeResponse(payload);
+    return payload;
 }
