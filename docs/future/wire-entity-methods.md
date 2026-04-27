@@ -14,7 +14,7 @@ Remove `Wire.submit`. Move all server interaction onto the entity proxy as `$`-p
 
 | Method | Purpose |
 |--------|---------|
-| `$getClass()` | Return entity FQCN (e.g. `"App\\Entity\\User"`) |
+| `$getClass()` | Return entity FQCN (e.g. `"user"`) |
 | `$getId()` | Return entity identifier |
 | `$getSnapshot()` | Return a JSON-serialisable snapshot of the entity's current state |
 | `$read(options?)` | Fetch fresh state from the configured read route; merge by identity |
@@ -102,7 +102,7 @@ if (user.$isDirty()) {
 Server response is tagged with identity:
 
 ```json
-{ "__class": "App\\Entity\\User", "__id": 42, "status": "saved" }
+{ "__class": "user", "__id": 42, "status": "saved" }
 ```
 
 Wire looks up every live proxy with matching `(__class, __id)` and merges the partial. All scopes containing that entity re-render the affected paths.
@@ -111,8 +111,8 @@ Multiple entities in one response are each merged by their own identity:
 
 ```json
 [
-    { "__class": "App\\Entity\\User", "__id": 42, "name": "Alice" },
-    { "__class": "App\\Entity\\Address", "__id": 7, "city": "Berlin" }
+    { "__class": "user", "__id": 42, "name": "Alice" },
+    { "__class": "address", "__id": 7, "city": "Berlin" }
 ]
 ```
 
