@@ -12,17 +12,17 @@ describe('entityRegistry', () => {
 
     it('identityKey returns null for non-entity targets', () => {
         expect(identityKey({ name: 'x' })).toBeNull();
-        expect(identityKey({ __class: 'X' })).toBeNull();
+        expect(identityKey({ __wire: { type: 'X' } })).toBeNull();
         expect(identityKey(null)).toBeNull();
     });
 
-    it('identityKey composes class and id', () => {
-        expect(identityKey({ __class: 'User', __id: 42 })).toBe('User#42');
-        expect(identityKey({ __class: 'C', __id: { a: 1 } })).toBe('C#{"a":1}');
+    it('identityKey composes wire type and id', () => {
+        expect(identityKey({ __wire: { type: 'User', id: 42 } })).toBe('User#42');
+        expect(identityKey({ __wire: { type: 'C', id: { a: 1 } } })).toBe('C#{"a":1}');
     });
 
     it('registerEntity stores baseline without identity tags', () => {
-        const canonical = { __class: 'User', __id: 1, name: 'Alice', __read: { url: '/x', method: 'GET' } };
+        const canonical = { __wire: { type: 'User', id: 1 }, name: 'Alice', __read: { url: '/x', method: 'GET' } };
         registerEntity(canonical);
 
         const entry = getEntry(canonical);
@@ -33,7 +33,7 @@ describe('entityRegistry', () => {
     });
 
     it('refreshBaseline replaces baseline with current canonical state', () => {
-        const canonical = { __class: 'User', __id: 1, name: 'Alice' };
+        const canonical = { __wire: { type: 'User', id: 1 }, name: 'Alice' };
         registerEntity(canonical);
 
         canonical.name = 'Bob';
@@ -43,8 +43,8 @@ describe('entityRegistry', () => {
     });
 
     it('clearRegistry drops all entries', () => {
-        registerEntity({ __class: 'User', __id: 1, name: 'Alice' });
+        registerEntity({ __wire: { type: 'User', id: 1 }, name: 'Alice' });
         clearRegistry();
-        expect(getEntry({ __class: 'User', __id: 1 })).toBeUndefined();
+        expect(getEntry({ __wire: { type: 'User', id: 1 } })).toBeUndefined();
     });
 });

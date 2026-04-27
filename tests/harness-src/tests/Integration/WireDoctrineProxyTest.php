@@ -20,8 +20,8 @@ class WireDoctrineProxyTest extends WireIntegrationTestCase
         $data = $this->wireData('wire_test/user.html.twig', ['user' => $proxy]);
         $this->assertSame('Proxy User', $data['user']['name']);
         $this->assertSame('proxy@example.com', $data['user']['email']);
-        $this->assertSame(User::class, $data['user']['__class']);
-        $this->assertSame($id, $data['user']['__id']);
+        $this->assertSame(substr(hash('sha256', User::class), 0, 8), $data['user']['__wire']['type']);
+        $this->assertSame($id, $data['user']['__wire']['id']);
     }
 
     public function testGhostProxyInTwoScopesProducesRef(): void
@@ -79,8 +79,8 @@ class WireDoctrineProxyTest extends WireIntegrationTestCase
         $scopes = $this->wireDataAll('wire_test/multi.html.twig', ['users' => [$a, $b]]);
         $this->assertCount(2, $scopes);
         $this->assertSame(
-            $scopes[0]['user']['address']['__id'],
-            $scopes[1]['user']['address']['__id']
+            $scopes[0]['user']['address']['__wire']['id'],
+            $scopes[1]['user']['address']['__wire']['id']
         );
     }
 }

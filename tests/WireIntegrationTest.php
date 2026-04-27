@@ -72,8 +72,7 @@ class WireIntegrationTest extends TestCase
 
         preg_match('/<script type="wire">(.*?)<\/script>/s', $html, $m);
         $data = json_decode($m[1], true);
-        $this->assertArrayNotHasKey('__class', $data['user']);
-        $this->assertArrayNotHasKey('__id', $data['user']);
+        $this->assertArrayNotHasKey('__wire', $data['user']);
     }
 
     public function testNoScopeWithoutWireTag(): void

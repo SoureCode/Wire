@@ -128,8 +128,7 @@ test.describe('snapshot consistency', () => {
 
     test('snapshot strips identity tags', async ({ page }) => {
         const snap = await page.evaluate((sel) => window.Wire.getScope(document.querySelector(sel)).getSnapshot(), A_ANCHOR);
-        expect(snap.user.__class).toBeUndefined();
-        expect(snap.user.__id).toBeUndefined();
+        expect(snap.user.__wire).toBeUndefined();
     });
 });
 

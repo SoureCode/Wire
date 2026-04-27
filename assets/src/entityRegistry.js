@@ -1,10 +1,10 @@
-import { stripIdentityTags } from './identity.js';
+import { isWireIdentity, stripIdentityTags } from './identity.js';
 import { deepClone } from './utils/deepClone.js';
 import { isPlainObject } from './utils/isPlainObject.js';
 import { updateBindings } from './bindings.js';
 
 /**
- * Per-entity bookkeeping keyed by identity (`${__class}#${JSON.stringify(__id)}`).
+ * Per-entity bookkeeping keyed by identity (`${__wire.type}#${JSON.stringify(__wire.id)}`).
  *
  * Holds:
  * - `canonical` — the JS object shared by every scope after unification.
@@ -24,10 +24,10 @@ export function identityKey(target) {
     if (target === null || typeof target !== 'object') {
         return null;
     }
-    if (typeof target['__class'] !== 'string' || !('__id' in target)) {
+    if (!isWireIdentity(target['__wire'])) {
         return null;
     }
-    return `${target['__class']}#${JSON.stringify(target['__id'])}`;
+    return `${target['__wire'].type}#${JSON.stringify(target['__wire'].id)}`;
 }
 
 /**
@@ -103,7 +103,7 @@ export function mergeIntoEntity(payload) {
 
     const changed = [];
     for (const key of Object.keys(payload)) {
-        if (key === '__class' || key === '__id' || key === '__read' || key === '__update') {
+        if (key === '__wire' || key === '__read' || key === '__update') {
             continue;
         }
         entry.canonical[key] = payload[key];

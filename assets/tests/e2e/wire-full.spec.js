@@ -169,8 +169,7 @@ test.describe('Wire API', () => {
 
     test('scope.snapshot strips identity tags', async ({ page }) => {
         const snap = await page.evaluate((sel) => window.Wire.getScope(document.querySelector(sel)).getSnapshot(), ANCHOR);
-        expect(snap.user.__class).toBeUndefined();
-        expect(snap.user.__id).toBeUndefined();
+        expect(snap.user.__wire).toBeUndefined();
         expect(snap.user.__read).toBeUndefined();
         expect(snap.user.__update).toBeUndefined();
     });

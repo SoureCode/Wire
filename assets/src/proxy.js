@@ -11,14 +11,14 @@ import { Scope } from './scope.js';
  *
  * Reserved `$`-prefixed methods on every proxy:
  *
- * - `$getClass()`    — entity class token (`__class`), or undefined
- * - `$getId()`       — entity identifier (`__id`), or undefined
+ * - `$getType()`     — opaque entity type token (`__wire.type`), or undefined
+ * - `$getId()`       — entity identifier (`__wire.id`), or undefined
  * - `$getSnapshot()` — fresh deep clone of this object with identity tags stripped
  * - `$isDirty()`     — true if current state differs from the last server-confirmed snapshot
  * - `$revert()`      — restore fields to the last server-confirmed snapshot
  * - `$on(callback)` / `$on(path, callback)` — subscribe to entity changes; returns unsubscribe
  *
- * `$isDirty`, `$revert`, and `$on` are no-ops on non-entity proxies (no `__id`).
+ * `$isDirty`, `$revert`, and `$on` are no-ops on non-entity proxies (no `__wire` identity).
  *
  * The `$` prefix is reserved; entity field names beginning with `$` are not supported.
  *
@@ -39,12 +39,12 @@ export function makeProxy(data, scope, path = '', entityOwner = null, entityPath
                 return () => stripIdentityTags(deepClone(target));
             }
 
-            if (key === '$getClass') {
-                return () => target['__class'];
+            if (key === '$getType') {
+                return () => target['__wire']?.type;
             }
 
             if (key === '$getId') {
-                return () => target['__id'];
+                return () => target['__wire']?.id;
             }
 
             if (key === '$isDirty') {
@@ -134,7 +134,7 @@ function revert(target, scope, path) {
     }
 
     for (const key of Object.keys(target)) {
-        if (touched.has(key) || key === '__class' || key === '__id' || key === '__read' || key === '__update') {
+        if (touched.has(key) || key === '__wire' || key === '__read' || key === '__update') {
             continue;
         }
         delete target[key];
@@ -172,8 +172,8 @@ function onListener(target, args) {
  * @returns {Promise<unknown>}
  */
 async function update(target, options = {}) {
-    if (!('__id' in target) || target['__id'] === undefined || target['__id'] === null) {
-        throw new Error('$update: entity has no __id; identity-less proxies cannot round-trip.');
+    if (identityKey(target) === null) {
+        throw new Error('$update: entity has no __wire identity; identity-less proxies cannot round-trip.');
     }
 
     const config = target['__update'];
@@ -212,8 +212,8 @@ async function update(target, options = {}) {
  * @returns {Promise<unknown>}
  */
 async function read(target, options = {}) {
-    if (!('__id' in target) || target['__id'] === undefined || target['__id'] === null) {
-        throw new Error('$read: entity has no __id; identity-less proxies cannot round-trip.');
+    if (identityKey(target) === null) {
+        throw new Error('$read: entity has no __wire identity; identity-less proxies cannot round-trip.');
     }
 
     const config = target['__read'];

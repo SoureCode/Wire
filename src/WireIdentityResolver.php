@@ -10,10 +10,6 @@ use Symfony\Component\PropertyAccess\PropertyAccessorInterface;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Routing\RouterInterface;
 
-/**
- * Builds the identity tag (`__class`, `__id`, optional `__read` / `__update`)
- * for a value. Used both by the path-walking runtime and by WireIdentityNormalizer.
- */
 class WireIdentityResolver
 {
     public function __construct(
@@ -25,7 +21,7 @@ class WireIdentityResolver
     }
 
     /**
-     * @return array{__class:string,__id:mixed,__read?:array{url:string,method:string},__update?:array{url:string,method:string}}|null
+     * @return array{__wire:array{type:string,id:mixed},__read?:array{url:string,method:string},__update?:array{url:string,method:string}}|null
      */
     public function tag(object $value): ?array
     {
@@ -44,8 +40,10 @@ class WireIdentityResolver
         $id = count($idValues) === 1 ? reset($idValues) : $idValues;
 
         $tag = [
-            '__class' => $this->debug ? $class : substr(hash('sha256', $class), 0, 8),
-            '__id'    => $id,
+            '__wire' => [
+                'type' => substr(hash('sha256', $class), 0, 8),
+                'id'   => $id,
+            ],
         ];
 
         $wire = $this->wireAttribute($class);

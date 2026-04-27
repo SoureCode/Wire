@@ -33,8 +33,8 @@ class WireRelationshipTest extends WireIntegrationTestCase
         $this->em->flush();
 
         $data = $this->wireData('wire_test/user_relations.html.twig', ['user' => $user]);
-        $this->assertSame(Address::class, $data['user']['address']['__class']);
-        $this->assertSame($address->id, $data['user']['address']['__id']);
+        $this->assertSame(substr(hash('sha256', Address::class), 0, 8), $data['user']['address']['__wire']['type']);
+        $this->assertSame($address->id, $data['user']['address']['__wire']['id']);
     }
 
     public function testNullManyToOneSerializesAsNull(): void
@@ -64,12 +64,12 @@ class WireRelationshipTest extends WireIntegrationTestCase
         $scopes = $this->wireDataAll('wire_test/multi.html.twig', ['users' => [$user1, $user2]]);
         $this->assertCount(2, $scopes);
         $this->assertSame(
-            $scopes[0]['user']['address']['__id'],
-            $scopes[1]['user']['address']['__id']
+            $scopes[0]['user']['address']['__wire']['id'],
+            $scopes[1]['user']['address']['__wire']['id']
         );
         $this->assertSame(
-            $scopes[0]['user']['address']['__class'],
-            $scopes[1]['user']['address']['__class']
+            $scopes[0]['user']['address']['__wire']['type'],
+            $scopes[1]['user']['address']['__wire']['type']
         );
     }
 }

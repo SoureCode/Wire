@@ -32,11 +32,13 @@ class WireTestController extends AbstractController
         }
 
         return new \Symfony\Component\HttpFoundation\JsonResponse([
-            '__class' => \App\Entity\User::class,
-            '__id'    => $user->id,
-            'name'    => $user->name,
-            'email'   => $user->email,
-            'status'  => $user->status,
+            '__wire' => [
+                'type' => substr(hash('sha256', \App\Entity\User::class), 0, 8),
+                'id'   => $user->id,
+            ],
+            'name'   => $user->name,
+            'email'  => $user->email,
+            'status' => $user->status,
         ]);
     }
 
@@ -61,11 +63,13 @@ class WireTestController extends AbstractController
         $em->flush();
 
         return new \Symfony\Component\HttpFoundation\JsonResponse([
-            '__class' => \App\Entity\User::class,
-            '__id'    => $user->id,
-            'name'    => $user->name,
-            'email'   => $user->email,
-            'status'  => $user->status,
+            '__wire' => [
+                'type' => substr(hash('sha256', \App\Entity\User::class), 0, 8),
+                'id'   => $user->id,
+            ],
+            'name'   => $user->name,
+            'email'  => $user->email,
+            'status' => $user->status,
         ]);
     }
 

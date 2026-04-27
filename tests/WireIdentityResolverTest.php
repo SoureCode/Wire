@@ -72,8 +72,8 @@ class WireIdentityResolverTest extends TestCase
         $tag = $resolver->tag(new WireResolverFixtureUser(42, 'Alice'));
 
         $this->assertNotNull($tag);
-        $this->assertSame(WireResolverFixtureUser::class, $tag['__class']);
-        $this->assertSame(42, $tag['__id']);
+        $this->assertSame(substr(hash('sha256', WireResolverFixtureUser::class), 0, 8), $tag['__wire']['type']);
+        $this->assertSame(42, $tag['__wire']['id']);
 
         $this->assertArrayHasKey('__read', $tag);
         $this->assertSame('/api/users/42', $tag['__read']['url']);

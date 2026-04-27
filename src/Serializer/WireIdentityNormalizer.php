@@ -7,10 +7,6 @@ use Symfony\Component\Serializer\Normalizer\NormalizerAwareInterface;
 use Symfony\Component\Serializer\Normalizer\NormalizerAwareTrait;
 use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
 
-/**
- * Tags Doctrine-managed objects with __class / __id / __read / __update
- * identity during serialization. Wraps any inner ObjectNormalizer.
- */
 class WireIdentityNormalizer implements NormalizerInterface, NormalizerAwareInterface
 {
     use NormalizerAwareTrait;

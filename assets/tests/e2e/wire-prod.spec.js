@@ -76,14 +76,13 @@ test.describe('Wire API in production mode', () => {
         const snap = await page.evaluate((sel) => window.Wire.getScope(document.querySelector(sel)).getSnapshot(), ANCHOR);
         expect(snap.user.name).toBe('Jason');
         expect(snap.user.email).toBe('jason@example.com');
-        expect(snap.user.__class).toBeUndefined();
-        expect(snap.user.__id).toBeUndefined();
+        expect(snap.user.__wire).toBeUndefined();
     });
 
-    test('entity payload carries hashed __class in prod', async ({ page }) => {
-        const cls = await page.evaluate((sel) => window.Wire.getScope(document.querySelector(sel)).get('user').__class, ANCHOR);
-        expect(cls).toMatch(/^[0-9a-f]{8}$/);
-        expect(cls).not.toContain('App\\Entity');
+    test('entity payload carries opaque wire type in prod', async ({ page }) => {
+        const type = await page.evaluate((sel) => window.Wire.getScope(document.querySelector(sel)).get('user').__wire.type, ANCHOR);
+        expect(type).toMatch(/^[0-9a-f]{8}$/);
+        expect(type).not.toContain('App\\Entity');
     });
 });
 

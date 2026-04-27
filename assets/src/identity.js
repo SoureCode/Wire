@@ -2,7 +2,7 @@ import { isPlainObject } from './utils/isPlainObject.js';
 
 /**
  * Walk every scope's data tree and unify objects that share the same
- * `__class` + `__id` identity into a single canonical instance. After this
+ * `__wire.type` + `__wire.id` identity into a single canonical instance. After this
  * pass, identical entities across scopes share JS object identity, so the
  * existing cross-scope refMap picks them up automatically.
  *
@@ -45,8 +45,8 @@ function unify(value, identityMap) {
         value[key] = unify(value[key], identityMap);
     }
 
-    if (typeof value['__class'] === 'string' && '__id' in value) {
-        const key = `${value['__class']}#${JSON.stringify(value['__id'])}`;
+    if (isWireIdentity(value['__wire'])) {
+        const key = `${value['__wire'].type}#${JSON.stringify(value['__wire'].id)}`;
         const existing = identityMap.get(key);
 
         if (existing) {
@@ -67,7 +67,7 @@ function unify(value, identityMap) {
 
 /**
  * Return a deep-cloned copy of `value` with all identity tags
- * (`__class`, `__id`, `__read`, `__update`) stripped. Used when building
+ * (`__wire`, `__read`, `__update`) stripped. Used when building
  * snapshots for $update payloads, $isDirty comparisons, and history records.
  *
  * @param {unknown} value
@@ -85,7 +85,7 @@ export function stripIdentityTags(value) {
     const out = {};
 
     for (const key of Object.keys(value)) {
-        if (key === '__class' || key === '__id' || key === '__read' || key === '__update') {
+        if (key === '__wire' || key === '__read' || key === '__update') {
             continue;
         }
 
@@ -93,4 +93,12 @@ export function stripIdentityTags(value) {
     }
 
     return out;
+}
+
+/**
+ * @param {unknown} value
+ * @returns {value is { type: string, id: unknown }}
+ */
+export function isWireIdentity(value) {
+    return isPlainObject(value) && typeof value.type === 'string' && 'id' in value;
 }

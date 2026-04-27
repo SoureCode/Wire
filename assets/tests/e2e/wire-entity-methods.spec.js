@@ -11,13 +11,13 @@ test.describe('Entity proxy $-methods', () => {
         await expect(page.locator('#user-name')).toHaveText('Alice');
     });
 
-    test('$getClass and $getId return the identity tags', async ({ page }) => {
+    test('$getType and $getId return the wire identity', async ({ page }) => {
         const tag = await page.evaluate((sel) => {
             const u = window.Wire.getScope(document.querySelector(sel)).get('user');
-            return { cls: u.$getClass(), id: u.$getId() };
+            return { type: u.$getType(), id: u.$getId() };
         }, ANCHOR);
-        expect(typeof tag.cls).toBe('string');
-        expect(tag.cls.length).toBeGreaterThan(0);
+        expect(typeof tag.type).toBe('string');
+        expect(tag.type.length).toBeGreaterThan(0);
         expect(typeof tag.id).toBe('number');
     });
 
@@ -26,8 +26,7 @@ test.describe('Entity proxy $-methods', () => {
             return window.Wire.getScope(document.querySelector(sel)).get('user').$getSnapshot();
         }, ANCHOR);
         expect(snap).toMatchObject({ name: 'Alice', email: 'alice@example.com', status: 'active' });
-        expect(snap.__class).toBeUndefined();
-        expect(snap.__id).toBeUndefined();
+        expect(snap.__wire).toBeUndefined();
         expect(snap.__read).toBeUndefined();
         expect(snap.__update).toBeUndefined();
     });

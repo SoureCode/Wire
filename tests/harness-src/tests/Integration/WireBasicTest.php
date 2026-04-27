@@ -38,8 +38,8 @@ class WireBasicTest extends WireIntegrationTestCase
         $this->em->flush();
 
         $data = $this->wireData('wire_test/user.html.twig', ['user' => $user]);
-        $this->assertSame(User::class, $data['user']['__class']);
-        $this->assertSame($user->id, $data['user']['__id']);
+        $this->assertSame(substr(hash('sha256', User::class), 0, 8), $data['user']['__wire']['type']);
+        $this->assertSame($user->id, $data['user']['__wire']['id']);
     }
 
     public function testEntityCarriesSubmitUrlAndMethodFromRoute(): void
